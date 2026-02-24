@@ -35,21 +35,6 @@ cd avrc-2526
 jupyter notebook tutorials/src/
 ```
 
-## Course utilities
-
-[`tutorials/src/netsci_utils.py`](tutorials/src/netsci_utils.py) provides shared helpers used across all notebooks:
-
-- `draw_graph(G)` — consistent graph drawing
-- `compute_ccdf(sequence)` / `plot_ccdf(...)` — degree distribution plots
-- `print_network_stats(G)` — summary statistics
-- `load_openflights_usa()` / `load_friends()` — dataset loaders
-
-All notebooks import it with:
-```python
-from netsci_utils import *
-set_seeds()
-```
-
 ## Instructor
 
 Prof. Rossano Schifanella — [rossano.schifanella@unito.it](mailto:rossano.schifanella@unito.it)
