@@ -2,6 +2,8 @@
 
 Course materials for **Network Science** at the University of Turin (UNITO).
 
+📄 **[Syllabus](ns_syllabus.pdf)**
+
 ## Contents
 
 | Folder | Description |
