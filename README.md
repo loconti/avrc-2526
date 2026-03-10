@@ -22,6 +22,7 @@ Course materials for **Network Science** at the University of Turin (UNITO).
 | 2–3 | Recap on Graphs | [ns02-03-graphs.pdf](netsci/slides/ns02-03-graphs.pdf) | [02-03-intro-graphs.ipynb](netsci/tutorials/src/02-03-intro-graphs.ipynb) |
 | 4 | Strong and Weak Ties | [ns04-strong-weak-ties.pdf](netsci/slides/ns04-strong-weak-ties.pdf) | [04-strong-weak-ties.ipynb](netsci/tutorials/src/04-strong-weak-ties.ipynb) |
 | 5 | Homophily | [ns05-homophily.pdf](netsci/slides/ns05-homophily.pdf) | [05-homophily.ipynb](netsci/tutorials/src/05-homophily.ipynb) |
+| 6 | Centrality Measures | [ns06-centrality-measures.pdf](netsci/slides/ns06-centrality-measures.pdf) | [06a-eigenvector-centrality.ipynb](netsci/tutorials/src/06a-eigenvector-centrality.ipynb), [06b-katz-centrality.ipynb](netsci/tutorials/src/06b-katz-centrality.ipynb), [06c-centralities.ipynb](netsci/tutorials/src/06c-centralities.ipynb) |
 
 ### Getting started
 
