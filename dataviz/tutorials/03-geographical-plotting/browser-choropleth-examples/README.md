@@ -56,9 +56,12 @@ cd tutorials/03-geographical-plotting/browser-choropleth-examples
 python3 -m http.server 8000
 ```
 
-Then open:
+Then open the landing page:
 
 - `http://localhost:8000/`
+
+From there you can navigate to the three individual examples. You can also open them directly:
+
 - `http://localhost:8000/leaflet-london-crime-choropleth.html`
 - `http://localhost:8000/deck-gl-london-crime-choropleth.html`
 - `http://localhost:8000/maplibre-london-crime-choropleth.html`
