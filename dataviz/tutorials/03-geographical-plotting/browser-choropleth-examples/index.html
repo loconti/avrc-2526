@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Browser Choropleth Examples</title>
+    <style>
+        :root {
+            --bg: #f5f2ea;
+            --panel: rgba(255, 255, 255, 0.94);
+            --ink: #1e1b16;
+            --muted: #5a5349;
+            --border: #d9d0c4;
+            --accent: #9d3c1f;
+            --accent-soft: #f3d7b4;
+            --shadow: 0 14px 40px rgba(48, 39, 29, 0.10);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            min-height: 100%;
+            font-family: "Source Sans 3", "Segoe UI", sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at top left, #fff9ef 0%, transparent 34%),
+                linear-gradient(180deg, #eee5d7 0%, var(--bg) 48%, #f8f5ef 100%);
+        }
+
+        body {
+            padding: 36px 22px 48px;
+        }
+
+        .page {
+            max-width: 1120px;
+            margin: 0 auto;
+        }
+
+        .hero {
+            padding: 28px 30px;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .eyebrow {
+            margin: 0 0 8px;
+            font-size: 0.92rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--accent);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: clamp(2rem, 4vw, 3.3rem);
+            line-height: 0.98;
+            letter-spacing: -0.03em;
+        }
+
+        .hero p {
+            max-width: 760px;
+            margin: 14px 0 0;
+            font-size: 1.04rem;
+            line-height: 1.5;
+            color: var(--muted);
+        }
+
+        .shared-box {
+            margin-top: 18px;
+            padding: 16px 18px;
+            background: #fffaf3;
+            border: 1px solid #eadfcf;
+            border-radius: 14px;
+        }
+
+        .shared-box strong {
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .shared-box ul {
+            margin: 0;
+            padding-left: 20px;
+            line-height: 1.55;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 18px;
+            margin-top: 24px;
+        }
+
+        .card {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            padding: 20px;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            box-shadow: var(--shadow);
+        }
+
+        .card h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            line-height: 1.08;
+        }
+
+        .card p {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        .launch {
+            display: inline-block;
+            width: fit-content;
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: var(--accent);
+            color: white;
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .launch:hover {
+            background: #7e2f18;
+        }
+
+        .info-list {
+            margin: 0;
+            padding-left: 18px;
+            line-height: 1.55;
+            color: var(--muted);
+        }
+
+        .docs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .docs a {
+            padding: 8px 11px;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            text-decoration: none;
+            color: var(--ink);
+            background: #fff;
+            font-size: 0.92rem;
+        }
+
+        .docs a:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .footer {
+            margin-top: 24px;
+            padding: 18px 20px;
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+    </style>
+</head>
+
+<body>
+    <main class="page">
+        <section class="hero">
+            <p class="eyebrow">Geographical Plotting</p>
+            <h1>Browser Choropleth Implementations</h1>
+            <p>
+                These examples reproduce the interactive London crime-score choropleth from the notebook with three
+                different browser mapping libraries. The goal is not to change the data story, but to show how the
+                same choropleth logic is expressed through different APIs.
+            </p>
+            <div class="shared-box">
+                <strong>Shared analytical choices</strong>
+                <ul>
+                    <li>Dataset: London IMD MSOA polygons</li>
+                    <li>Variable: <code>crime</code></li>
+                    <li>CRS for browser rendering: <code>EPSG:4326</code></li>
+                    <li>Classification: <code>Quantiles(k=5)</code>, precomputed once in Python</li>
+                    <li>Appearance: 5-class <code>YlOrRd</code> palette, thin outline, neutral basemap</li>
+                </ul>
+            </div>
+        </section>
+
+        <section class="grid">
+            <article class="card">
+                <h2>Leaflet</h2>
+                <p>
+                    Leaflet is the clearest starting point if you want to understand an interactive choropleth as a
+                    raster basemap plus a GeoJSON overlay.
+                </p>
+                <a class="launch" href="./leaflet-london-crime-choropleth.html">Open Leaflet Example</a>
+                <ul class="info-list">
+                    <li>The map is built from <code>L.tileLayer</code> and <code>L.geoJSON</code>.</li>
+                    <li>Styling happens feature by feature through a simple JavaScript function.</li>
+                    <li>Hover and click behavior are attached inside <code>onEachFeature</code>.</li>
+                    <li>The legend is a custom Leaflet control, so the class labels stay explicit.</li>
+                </ul>
+                <div class="docs">
+                    <a href="https://leafletjs.com/">Leaflet Home</a>
+                    <a href="https://leafletjs.com/examples/quick-start/">Quick Start</a>
+                    <a href="https://leafletjs.com/reference.html#geojson">GeoJSON Reference</a>
+                </div>
+            </article>
+
+            <article class="card">
+                <h2>deck.gl</h2>
+                <p>
+                    deck.gl is useful when you want to think in terms of rendering layers: one layer for the basemap
+                    tiles and one layer for the choropleth polygons.
+                </p>
+                <a class="launch" href="./deck-gl-london-crime-choropleth.html">Open deck.gl Example</a>
+                <ul class="info-list">
+                    <li>The basemap is a <code>TileLayer</code> rendered through <code>BitmapLayer</code>.</li>
+                    <li>The choropleth is a <code>GeoJsonLayer</code> styled from the shared class index.</li>
+                    <li>Tooltips are handled by deck.gl’s picking system instead of DOM events on features.</li>
+                    <li>Click opens a modal with the same detail fields used in the other examples.</li>
+                    <li>The example is useful for understanding how deck.gl separates data, view state, and layers.</li>
+                </ul>
+                <div class="docs">
+                    <a href="https://deck.gl/docs">deck.gl Docs</a>
+                    <a href="https://deck.gl/docs/api-reference/layers/geojson-layer">GeoJsonLayer</a>
+                    <a href="https://deck.gl/docs/api-reference/geo-layers/tile-layer">TileLayer</a>
+                </div>
+            </article>
+
+            <article class="card">
+                <h2>MapLibre</h2>
+                <p>
+                    MapLibre shows the GL-style workflow without requiring a proprietary token. This is the best
+                    example if you want styled layers and vector-like map composition with an open-source library.
+                </p>
+                <a class="launch" href="./maplibre-london-crime-choropleth.html">Open MapLibre Example</a>
+                <ul class="info-list">
+                    <li>The map uses a style object with raster tiles plus custom fill and line layers.</li>
+                    <li>The choropleth is added as one GeoJSON source and two layers: fill and outline.</li>
+                    <li>Hover uses feature state, which is a common GL-map pattern.</li>
+                    <li>This version is close in structure to Mapbox GL JS, but remains token-free.</li>
+                </ul>
+                <div class="docs">
+                    <a href="https://maplibre.org/maplibre-gl-js/docs/">MapLibre Docs</a>
+                    <a href="https://maplibre.org/maplibre-gl-js/docs/API/classes/Map/">Map Class</a>
+                    <a href="https://maplibre.org/maplibre-style-spec/">Style Spec</a>
+                </div>
+            </article>
+        </section>
+
+        <section class="footer">
+            Open these files through a local web server, not through <code>file://</code>, because each example fetches
+            shared data from the <code>data/</code> directory. The preparation script
+            <code>prepare_london_crime_choropleth.py</code> is the single source of truth for the exported GeoJSON,
+            class breaks, labels, and palette metadata.
+        </section>
+    </main>
+</body>
+
+</html>

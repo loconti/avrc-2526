@@ -1,0 +1,74 @@
+{
+  "source_layer": "London_IMD_MSOA.shp",
+  "output_crs": "EPSG:4326",
+  "column": "crime",
+  "scheme": "quantiles",
+  "k": 5,
+  "bins": [
+    -0.831,
+    0.5536,
+    0.8678,
+    1.1268,
+    1.3846,
+    2.628
+  ],
+  "labels": [
+    "-0.83 to 0.55",
+    "0.55 to 0.87",
+    "0.87 to 1.13",
+    "1.13 to 1.38",
+    "1.38 to 2.63"
+  ],
+  "colors": [
+    "#ffffb2",
+    "#fecc5c",
+    "#fd8d3c",
+    "#f03b20",
+    "#bd0026"
+  ],
+  "bounds": [
+    -0.5103,
+    51.28676,
+    0.333996,
+    51.691873
+  ],
+  "center": [
+    -0.088152,
+    51.489316
+  ],
+  "zoom": 9.0,
+  "fill_opacity": 0.75,
+  "line_color": "#333333",
+  "line_width": 0.6,
+  "hover_line_color": "#111111",
+  "hover_line_width": 1.4,
+  "title": "London crime score by MSOA",
+  "subtitle": "Quantile bins; hover for area names and click for details.",
+  "legend_title": "Crime score (quantile bins)",
+  "tooltip": {
+    "fields": [
+      "msoa11nm",
+      "lad11nm",
+      "crime"
+    ],
+    "aliases": [
+      "MSOA",
+      "Borough",
+      "Crime score"
+    ]
+  },
+  "popup": {
+    "fields": [
+      "msoa11nm",
+      "lad11nm",
+      "crime",
+      "imd"
+    ],
+    "aliases": [
+      "MSOA",
+      "Borough",
+      "Crime score",
+      "Overall IMD"
+    ]
+  }
+}

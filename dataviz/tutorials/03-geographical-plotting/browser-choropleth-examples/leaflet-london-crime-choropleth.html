@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Leaflet Choropleth: London Crime Score by MSOA</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+    <style>
+        html, body { margin: 0; height: 100%; font-family: "Source Sans 3", "Segoe UI", sans-serif; background: #f4f4f4; color: #111; }
+        #page  { position: relative; height: 100%; }
+        #map   { height: 100%; width: 100%; }
+
+        /* ── Shared panel style ─────────────────────────────────────────── */
+        .panel {
+            position: absolute;
+            z-index: 900;
+            background: rgba(255, 255, 255, 0.96);
+            border: 1px solid #d8d8d8;
+            border-radius: 10px;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+        }
+        .title-panel { top: 16px; left: 16px; max-width: 420px; padding: 14px 16px; }
+        .title-panel h1 { margin: 0; font-size: 1.35rem; line-height: 1.15; }
+        .title-panel p  { margin: 8px 0 0; font-size: 0.98rem; line-height: 1.35; color: #3f3f3f; }
+        .home-link {
+            top: 16px;
+            right: 16px;
+            z-index: 950;
+            padding: 10px 14px;
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: #111;
+            text-decoration: none;
+        }
+        .home-link:hover { border-color: #9d3c1f; color: #9d3c1f; }
+
+        /* ── Legend — Leaflet positions the control; we mirror the same box style ─ */
+        .leaflet-control.legend {
+            width: 250px;
+            padding: 12px 14px;
+            line-height: 1.2;
+            background: rgba(255, 255, 255, 0.96);
+            border: 1px solid #d8d8d8;
+            border-radius: 10px;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+            color: #111;
+        }
+        .legend-title  { margin-bottom: 8px; font-weight: 700; font-size: 0.95rem; }
+        .legend-row    { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 0.92rem; color: #111; }
+        .legend-swatch { width: 16px; height: 16px; border: 1px solid rgba(0, 0, 0, 0.18); flex: 0 0 auto; }
+
+        /* ── Tooltip and popup ──────────────────────────────────────────── */
+        .leaflet-tooltip        { padding: 8px 10px; border: 1px solid #d8d8d8; border-radius: 8px; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.14); }
+        .popup-grid             { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; font-size: 0.92rem; }
+        .popup-grid strong      { white-space: nowrap; }
+    </style>
+</head>
+
+<body>
+    <div id="page">
+        <div class="panel title-panel">
+            <h1 id="map-title">Loading map…</h1>
+            <p id="map-subtitle"></p>
+        </div>
+        <a class="panel home-link" href="./index.html">Back</a>
+        <div id="map"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+        const DATA_URL = "./data/london-imd-crime-quantiles.geojson";
+        const META_URL = "./data/london-imd-crime-quantiles-meta.json";
+        // ── Shared content helpers ───────────────────────────────────────────
+        function buildLegendHTML(meta) {
+            const rows = meta.labels.map((label, i) =>
+                `<div class="legend-row"><span class="legend-swatch" style="background:${meta.colors[i]}"></span><span>${label}</span></div>`
+            ).join("");
+            return `<div class="legend-title">${meta.legend_title}</div>${rows}`;
+        }
+
+        function buildTooltipHTML(props, meta) {
+            return meta.tooltip.fields.map((f, i) =>
+                `<strong>${meta.tooltip.aliases[i]}:</strong> ${props[f]}`
+            ).join("<br>");
+        }
+
+        function buildDetailsHTML(props, meta) {
+            const rows = meta.popup.fields.map((f, i) =>
+                `<strong>${meta.popup.aliases[i]}:</strong><span>${props[f]}</span>`
+            ).join("");
+            return `<div class="popup-grid">${rows}</div>`;
+        }
+
+        function getViewportPadding(element) {
+            return [
+                Math.round(element.clientWidth * 0.20),
+                Math.round(element.clientHeight * 0.20)
+            ];
+        }
+
+        // ── Shared border helpers ────────────────────────────────────────────
+        function getBaseBorderStyle(meta) {
+            return {
+                color: meta.line_color,
+                weight: meta.line_width
+            };
+        }
+
+        function getHoverBorderStyle(meta) {
+            return {
+                color: meta.hover_line_color,
+                weight: meta.hover_line_width
+            };
+        }
+
+        // ── Leaflet-specific helpers ────────────────────────────────────────
+        function getFeatureStyle(feature, meta) {
+            const borderStyle = getBaseBorderStyle(meta);
+            return {
+                fillColor:   meta.colors[feature.properties.crime_class],
+                fillOpacity: meta.fill_opacity,
+                ...borderStyle,
+                opacity:     0.9
+            };
+        }
+
+        function createMap() {
+            const map = L.map("map", { zoomControl: false, preferCanvas: true });
+            L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+                attribution: "&copy; OpenStreetMap contributors &copy; CARTO",
+                maxZoom: 19
+            }).addTo(map);
+            return map;
+        }
+
+        function applyInitialView(map, meta, mapElement) {
+            map.fitBounds([
+                [meta.bounds[1], meta.bounds[0]],
+                [meta.bounds[3], meta.bounds[2]]
+            ], { padding: getViewportPadding(mapElement) });
+        }
+
+        function addLegend(map, meta) {
+            const legend = L.control({ position: "bottomright" });
+            legend.onAdd = () => {
+                const div = L.DomUtil.create("div", "legend leaflet-control");
+                div.innerHTML = buildLegendHTML(meta);
+                return div;
+            };
+            legend.addTo(map);
+        }
+
+        function addChoroplethLayer(map, geojson, meta) {
+            let choroplethLayer = null;
+            choroplethLayer = L.geoJSON(geojson, {
+                style: feature => getFeatureStyle(feature, meta),
+                onEachFeature: (feature, layer) => {
+                    const props = feature.properties;
+                    layer.bindTooltip(buildTooltipHTML(props, meta), {
+                        sticky: false, direction: "auto", className: "leaflet-tooltip"
+                    });
+                    layer.bindPopup(buildDetailsHTML(props, meta), { maxWidth: 280 });
+                    layer.on({
+                        mouseover: e => {
+                            e.target.setStyle(getHoverBorderStyle(meta));
+                            e.target.bringToFront();
+                        },
+                        mouseout: e => choroplethLayer.resetStyle(e.target)
+                    });
+                }
+            }).addTo(map);
+            return choroplethLayer;
+        }
+
+        Promise.all([
+            fetch(META_URL).then(r => r.json()),
+            fetch(DATA_URL).then(r => r.json())
+        ]).then(([meta, geojson]) => {
+            document.getElementById("map-title").textContent = meta.title;
+            document.getElementById("map-subtitle").textContent = meta.subtitle;
+            const mapElement = document.getElementById("map");
+            const map = createMap();
+            applyInitialView(map, meta, mapElement);
+            addChoroplethLayer(map, geojson, meta);
+            addLegend(map, meta);
+
+        }).catch(err => {
+            console.error("Unable to load the choropleth assets.", err);
+            document.getElementById("map-title").textContent = "Leaflet example failed to load";
+            document.getElementById("map-subtitle").textContent = "Check the console and make sure the files are served through a local web server.";
+        });
+    </script>
+</body>
+
+</html>

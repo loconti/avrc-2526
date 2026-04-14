@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MapLibre Choropleth: London Crime Score by MSOA</title>
+    <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+    <style>
+        html, body { margin: 0; height: 100%; font-family: "Source Sans 3", "Segoe UI", sans-serif; background: #f4f4f4; color: #111; }
+        #page  { position: relative; height: 100%; }
+        #map   { height: 100%; width: 100%; }
+
+        /* ── Shared panel style ─────────────────────────────────────────── */
+        .panel {
+            position: absolute;
+            z-index: 2;
+            background: rgba(255, 255, 255, 0.96);
+            border: 1px solid #d8d8d8;
+            border-radius: 10px;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+        }
+        .title-panel  { top: 16px; left: 16px; max-width: 420px; padding: 14px 16px; }
+        .title-panel h1 { margin: 0; font-size: 1.35rem; line-height: 1.15; }
+        .title-panel p  { margin: 8px 0 0; font-size: 0.98rem; line-height: 1.35; color: #3f3f3f; }
+        .home-link {
+            top: 16px;
+            right: 16px;
+            padding: 10px 14px;
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: #111;
+            text-decoration: none;
+        }
+        .home-link:hover { border-color: #9d3c1f; color: #9d3c1f; }
+        .legend-panel { right: 16px; bottom: 16px; padding: 12px 14px; width: 250px; }
+        .legend-title  { margin-bottom: 8px; font-size: 0.95rem; font-weight: 700; }
+        .legend-row    { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 0.92rem; }
+        .legend-swatch { width: 16px; height: 16px; border: 1px solid rgba(0, 0, 0, 0.18); flex: 0 0 auto; }
+
+        /* ── Popup ──────────────────────────────────────────────────────── */
+        .maplibregl-popup-content { padding: 12px 14px; font-family: "Source Sans 3", "Segoe UI", sans-serif; }
+        .popup-grid             { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; font-size: 0.92rem; }
+        .popup-grid strong      { white-space: nowrap; }
+    </style>
+</head>
+
+<body>
+    <div id="page">
+        <div class="panel title-panel">
+            <h1 id="map-title">Loading map…</h1>
+            <p id="map-subtitle"></p>
+        </div>
+        <a class="panel home-link" href="./index.html">Back</a>
+        <div id="map"></div>
+        <div id="legend" class="panel legend-panel"></div>
+    </div>
+
+    <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+    <script>
+        const DATA_URL    = "./data/london-imd-crime-quantiles.geojson";
+        const META_URL    = "./data/london-imd-crime-quantiles-meta.json";
+        const RASTER_TILES = ["a", "b", "c", "d"].map(s =>
+            `https://${s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png`
+        );
+
+        // ── Shared content helpers ───────────────────────────────────────────
+        function buildLegendHTML(meta) {
+            const rows = meta.labels.map((label, i) =>
+                `<div class="legend-row"><span class="legend-swatch" style="background:${meta.colors[i]}"></span><span>${label}</span></div>`
+            ).join("");
+            return `<div class="legend-title">${meta.legend_title}</div>${rows}`;
+        }
+
+        function buildTooltipHTML(props, meta) {
+            return meta.tooltip.fields.map((f, i) =>
+                `<strong>${meta.tooltip.aliases[i]}:</strong> ${props[f]}`
+            ).join("<br>");
+        }
+
+        function buildDetailsHTML(props, meta) {
+            const rows = meta.popup.fields.map((f, i) =>
+                `<strong>${meta.popup.aliases[i]}:</strong><span>${props[f]}</span>`
+            ).join("");
+            return `<div class="popup-grid">${rows}</div>`;
+        }
+
+        function getViewportPadding(element) {
+            return {
+                top: Math.round(element.clientHeight * 0.20),
+                bottom: Math.round(element.clientHeight * 0.20),
+                left: Math.round(element.clientWidth * 0.20),
+                right: Math.round(element.clientWidth * 0.20)
+            };
+        }
+
+        // ── MapLibre-specific helpers ───────────────────────────────────────
+        function buildFillColorExpression(colors) {
+            return ["match", ["get", "crime_class"],
+                ...colors.flatMap((color, i) => [i, color]),
+                "#cccccc"
+            ];
+        }
+
+        function buildBorderExpression(meta) {
+            return {
+                color: ["case", ["boolean", ["feature-state", "hover"], false], meta.hover_line_color, meta.line_color],
+                width: ["case", ["boolean", ["feature-state", "hover"], false], meta.hover_line_width, meta.line_width]
+            };
+        }
+
+        function createMap(meta) {
+            return new maplibregl.Map({
+                container: "map",
+                style: {
+                    version: 8,
+                    sources: {
+                        "carto-positron": {
+                            type: "raster",
+                            tiles: RASTER_TILES,
+                            tileSize: 256,
+                            attribution: "&copy; OpenStreetMap contributors &copy; CARTO"
+                        }
+                    },
+                    layers: [{ id: "carto-positron", type: "raster", source: "carto-positron" }]
+                },
+                center: meta.center,
+                zoom: meta.zoom
+            });
+        }
+
+        function applyInitialView(map, meta, mapElement) {
+            map.fitBounds([
+                [meta.bounds[0], meta.bounds[1]],
+                [meta.bounds[2], meta.bounds[3]]
+            ], { padding: getViewportPadding(mapElement), duration: 0 });
+        }
+
+        function clearHoverState(map, hoveredId) {
+            if (hoveredId !== null) {
+                map.setFeatureState({ source: "imd-crime", id: hoveredId }, { hover: false });
+            }
+        }
+
+        Promise.all([
+            fetch(META_URL).then(r => r.json()),
+            fetch(DATA_URL).then(r => r.json())
+        ]).then(([meta, geojson]) => {
+            document.getElementById("map-title").textContent = meta.title;
+            document.getElementById("map-subtitle").textContent = meta.subtitle;
+            document.getElementById("legend").innerHTML = buildLegendHTML(meta);
+            const borderExpression = buildBorderExpression(meta);
+            const mapElement = document.getElementById("map");
+            const map = createMap(meta);
+
+            let hoveredId  = null;
+            let clickPopup = null;
+
+            const hoverPopup = new maplibregl.Popup({
+                closeButton: false, closeOnClick: false, offset: 12, maxWidth: "240px"
+            });
+
+            map.on("load", () => {
+                map.addSource("imd-crime", { type: "geojson", data: geojson, promoteId: "feature_id" });
+
+                map.addLayer({
+                    id: "imd-fill", type: "fill", source: "imd-crime",
+                    paint: {
+                        "fill-color":   buildFillColorExpression(meta.colors),
+                        "fill-opacity": meta.fill_opacity
+                    }
+                });
+
+                // A separate line layer reads the "hover" feature state to switch
+                // stroke color and width without rebuilding the fill layer.
+                map.addLayer({
+                    id: "imd-line", type: "line", source: "imd-crime",
+                    paint: {
+                        "line-color": borderExpression.color,
+                        "line-width": borderExpression.width
+                    }
+                });
+
+                applyInitialView(map, meta, mapElement);
+
+                map.on("mousemove", "imd-fill", e => {
+                    map.getCanvas().style.cursor = "pointer";
+                    const feature = e.features[0];
+                    clearHoverState(map, hoveredId);
+                    hoveredId = feature.properties.feature_id;
+                    map.setFeatureState({ source: "imd-crime", id: hoveredId }, { hover: true });
+                    hoverPopup.setLngLat(e.lngLat).setHTML(buildTooltipHTML(feature.properties, meta)).addTo(map);
+                });
+
+                map.on("mouseleave", "imd-fill", () => {
+                    map.getCanvas().style.cursor = "";
+                    clearHoverState(map, hoveredId);
+                    hoveredId = null;
+                    hoverPopup.remove();
+                });
+
+                map.on("click", "imd-fill", e => {
+                    if (clickPopup) clickPopup.remove();
+                    clickPopup = new maplibregl.Popup({ closeButton: true, maxWidth: "280px" })
+                        .setLngLat(e.lngLat)
+                        .setHTML(buildDetailsHTML(e.features[0].properties, meta))
+                        .addTo(map);
+                });
+            });
+
+        }).catch(err => {
+            console.error("Unable to load the choropleth assets.", err);
+            document.getElementById("map-title").textContent = "MapLibre example failed to load";
+            document.getElementById("map-subtitle").textContent = "Check the console and make sure the files are served through a local web server.";
+        });
+    </script>
+</body>
+
+</html>
