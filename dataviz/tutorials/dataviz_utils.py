@@ -20,7 +20,19 @@ labeling/annotation helpers that favor clarity over theme-heavy styling.
 from __future__ import annotations
 
 import random
+import warnings
 from pathlib import Path
+
+# scipy 1.16 changed gaussian_kde.neff to a computed property that calls
+# np.vecdot internally; seaborn 0.13.x triggers numerical edge cases in that
+# path (divide-by-zero / overflow / invalid-value) that are harmless but
+# produce confusing noise in teaching notebooks.
+warnings.filterwarnings(
+    "ignore",
+    message=r"(divide by zero|overflow|invalid value) encountered in vecdot",
+    category=RuntimeWarning,
+    module=r"scipy\._lib\._util",
+)
 
 import matplotlib.patheffects as pe
 import matplotlib.pyplot as plt
