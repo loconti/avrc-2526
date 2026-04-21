@@ -54,11 +54,6 @@ Course materials for **Network Science** at the University of Turin (UNITO).
 | 5 | Static Plotting in Python | [dv05-rules-of-thumbs.pdf](dataviz/slides/dv05-rules-of-thumbs.pdf) | [01-matplotlib/](dataviz/tutorials/01-matplotlib/), [02-seaborn/](dataviz/tutorials/02-seaborn/) |
 | 6 | Geographical Plotting in Python | [dv06-geographical-plotting.pdf](dataviz/slides/dv06-geographical-plotting.pdf) | [03-geographical-plotting/](dataviz/tutorials/03-geographical-plotting/) |
 | 7 | Static Networks in Python | | [01-networkx-drawing-basics.ipynb](dataviz/tutorials/04-networks/01-networkx-drawing-basics.ipynb), [02-network-layouts.ipynb](dataviz/tutorials/04-networks/02-network-layouts.ipynb), [03-network-labels.ipynb](dataviz/tutorials/04-networks/03-network-labels.ipynb), [04-game-of-thrones-network-case-study.ipynb](dataviz/tutorials/04-networks/04-game-of-thrones-network-case-study.ipynb), [05-networks-and-space.ipynb](dataviz/tutorials/04-networks/05-networks-and-space.ipynb), [06-networks-plotly.ipynb](dataviz/tutorials/04-networks/06-networks-plotly.ipynb) |
-| 8 | Interactive Views | | |
-| 9 | Introduction to D3.js | | |
-| 10 | SVG, General Update Pattern, Transitions | | |
-| 11 | Interactions and Event Listeners | | |
-| 12 | Graphs Visualization | | |
 
 ---
 
