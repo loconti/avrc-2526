@@ -51,19 +51,14 @@ Course materials for **Network Science** at the University of Turin (UNITO).
 | 2 | Nested Model, Data & Task Abstractions | [dv02-model-data-task-abstractions.pdf](dataviz/slides/dv02-model-data-task-abstractions.pdf) | |
 | 3 | Marks, Channels, and Color | [dv03-marks-channels-color.pdf](dataviz/slides/dv03-marks-channels-color.pdf) | |
 | 4 | Tables | [dv04-tables.pdf](dataviz/slides/dv04-tables.pdf) | |
-
-### Tutorials
-
-**Networks** — `dataviz/tutorials/04-networks/`
-
-| # | Notebook | Description |
-|---|---|---|
-| 01 | [`01-networkx-drawing-basics.ipynb`](dataviz/tutorials/04-networks/01-networkx-drawing-basics.ipynb) | From `nx.draw()` to layered rendering; data-driven visual encoding with size and colour. |
-| 02 | [`02-network-layouts.ipynb`](dataviz/tutorials/04-networks/02-network-layouts.ipynb) | Spring and Kamada-Kawai layout principles; measuring and removing node-marker overlap in rendered space. |
-| 03 | [`03-network-labels.ipynb`](dataviz/tutorials/04-networks/03-network-labels.ipynb) | Principled label placement on dense networks; measurable label overlap as a rendering problem. |
-| 04 | [`04-game-of-thrones-network-case-study.ipynb`](dataviz/tutorials/04-networks/04-game-of-thrones-network-case-study.ipynb) | Community detection and a publication-ready composite figure on the GOT Book 1 graph. |
-| 05 | [`05-networks-and-space.ipynb`](dataviz/tutorials/04-networks/05-networks-and-space.ipynb) | Spatial networks and geographic embedding. |
-| 06 | [`06-networks-plotly.ipynb`](dataviz/tutorials/04-networks/06-networks-plotly.ipynb) | Interactive counterpart — Plotly's two-trace pattern, `updatemenus`, sliders, neighbourhood highlighting, and a Pyvis alternative. |
+| 5 | Static Plotting in Python | [dv05-rules-of-thumbs.pdf](dataviz/slides/dv05-rules-of-thumbs.pdf) | [01-matplotlib/](dataviz/tutorials/01-matplotlib/), [02-seaborn/](dataviz/tutorials/02-seaborn/) |
+| 6 | Geographical Plotting in Python | [dv06-geographical-plotting.pdf](dataviz/slides/dv06-geographical-plotting.pdf) | [03-geographical-plotting/](dataviz/tutorials/03-geographical-plotting/) |
+| 7 | Static Networks in Python | | [01-networkx-drawing-basics.ipynb](dataviz/tutorials/04-networks/01-networkx-drawing-basics.ipynb), [02-network-layouts.ipynb](dataviz/tutorials/04-networks/02-network-layouts.ipynb), [03-network-labels.ipynb](dataviz/tutorials/04-networks/03-network-labels.ipynb), [04-game-of-thrones-network-case-study.ipynb](dataviz/tutorials/04-networks/04-game-of-thrones-network-case-study.ipynb), [05-networks-and-space.ipynb](dataviz/tutorials/04-networks/05-networks-and-space.ipynb), [06-networks-plotly.ipynb](dataviz/tutorials/04-networks/06-networks-plotly.ipynb) |
+| 8 | Interactive Views | | |
+| 9 | Introduction to D3.js | | |
+| 10 | SVG, General Update Pattern, Transitions | | |
+| 11 | Interactions and Event Listeners | | |
+| 12 | Graphs Visualization | | |
 
 ---
 
