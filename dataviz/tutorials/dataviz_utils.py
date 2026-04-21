@@ -98,6 +98,8 @@ CATEGORICAL_PALETTE = [
     "#CC79A7",
     "#56B4E9",
     "#F0E442",
+    "#000000",  # canonical 8th Okabe-Ito colour (black); added so that 8-way
+                # categorical partitions don't wrap and produce duplicates.
 ]
 
 CMAP_SEQUENTIAL = "viridis"
@@ -403,6 +405,176 @@ def load_bivariate_normal_demo(size: int = 240) -> np.ndarray:
     return Z1 + Z2 + Z3
 
 
+# ---- Node-overlap helpers (teaching version introduced in notebook 02) ----
+# These are used across the network-visualization notebooks to (a) measure how
+# many rendered node markers overlap on a given panel size and (b) remove that
+# overlap with a size-aware weighted relaxation pass. The inline versions in
+# notebook 02 remain the step-by-step walkthrough; these copies exist so
+# downstream notebooks can simply import and apply the tool.
+import math
+
+STANDARD_PANEL_SIZE = (4.8, 4.4)
+DISPLAY_GAP_PT = 0.0
+OVERLAP_TOL_PT = 1e-9
+
+
+def compute_node_radii(node_sizes, linewidth=0.7):
+    """Convert matplotlib ``node_size`` (area in points²) into a rendered radius in points."""
+    return {
+        node: math.sqrt(size / math.pi) + 0.5 * linewidth
+        for node, size in node_sizes.items()
+    }
+
+
+def points_per_data_unit(xlim, ylim, panel_size):
+    """Points (1/72 in) per one unit of data coordinates, assuming ``ax.set_aspect('equal')``."""
+    x_span = max(xlim[1] - xlim[0], 1e-9)
+    y_span = max(ylim[1] - ylim[0], 1e-9)
+    scale_in = min(panel_size[0] / x_span, panel_size[1] / y_span)
+    return 72.0 * scale_in
+
+
+def overlap_diagnostics(
+    pos,
+    radii,
+    *,
+    panel_size=STANDARD_PANEL_SIZE,
+    xlim=(0.0, 1.0),
+    ylim=(0.0, 1.0),
+    min_gap_pt=DISPLAY_GAP_PT,
+    tol_pt=OVERLAP_TOL_PT,
+):
+    """Return comparable overlap diagnostics on a fixed canonical plot box."""
+    nodes = list(pos)
+    if len(nodes) < 2:
+        return {
+            "overlap_pairs": 0,
+            "overlap_node_fraction": 0.0,
+            "overlap_nodes": [],
+            "overlap_mask": np.zeros(0, dtype=bool),
+        }
+
+    pts_per_unit = points_per_data_unit(xlim, ylim, panel_size)
+    coords = np.asarray([pos[node] for node in nodes], dtype=float)
+    radius_values = np.asarray([radii[node] for node in nodes], dtype=float)
+
+    diffs = coords[:, None, :] - coords[None, :, :]
+    distances_pt = np.linalg.norm(diffs, axis=-1) * pts_per_unit
+    required_pt = radius_values[:, None] + radius_values[None, :] + min_gap_pt
+
+    collide = distances_pt + tol_pt < required_pt
+    np.fill_diagonal(collide, False)
+
+    overlap_mask = collide.any(axis=1)
+    overlap_pairs = int(collide.sum() // 2)
+    overlap_node_fraction = float(overlap_mask.mean())
+    overlap_nodes = [node for node, flag in zip(nodes, overlap_mask) if flag]
+    return {
+        "overlap_pairs": overlap_pairs,
+        "overlap_node_fraction": overlap_node_fraction,
+        "overlap_nodes": overlap_nodes,
+        "overlap_mask": overlap_mask,
+    }
+
+
+def overlap_metrics(pos, radii, **kwargs):
+    diagnostics = overlap_diagnostics(pos, radii, **kwargs)
+    return {
+        "overlap_pairs": diagnostics["overlap_pairs"],
+        "overlap_node_fraction": diagnostics["overlap_node_fraction"],
+    }
+
+
+def resolve_node_collisions(
+    initial_pos,
+    radii,
+    *,
+    panel_size=STANDARD_PANEL_SIZE,
+    xlim=(0.0, 1.0),
+    ylim=(0.0, 1.0),
+    max_iter=1200,
+    min_gap_pt=DISPLAY_GAP_PT,
+    tol_pt=OVERLAP_TOL_PT,
+    pull_strength=0.0,
+    mass_power=2.0,
+    step_cap=0.35,
+):
+    """Reduce overlap with a size-aware weighted relaxation pass.
+
+    Larger nodes move less and smaller nodes move more when they collide,
+    so the correction preserves the broad structure of the input layout
+    while removing node-marker overlap in rendered space.
+
+    After convergence the whole layout is translated (no scaling) so it
+    sits centered inside the target frame; a pure translation cannot
+    reintroduce overlap.
+    """
+    nodes = list(initial_pos)
+    anchors = np.asarray([initial_pos[node] for node in nodes], dtype=float)
+    coords = anchors.copy()
+    radius_values = np.asarray([radii[node] for node in nodes], dtype=float)
+    masses = np.maximum(radius_values, 1e-6) ** mass_power
+    pts_per_unit = points_per_data_unit(xlim, ylim, panel_size)
+    required_distances = (radius_values[:, None] + radius_values[None, :] + min_gap_pt) / pts_per_unit
+    required_clip = (radius_values + min_gap_pt) / pts_per_unit
+    tol_data = tol_pt / pts_per_unit
+    n = len(nodes)
+
+    for _ in range(max_iter):
+        displacement = np.zeros_like(coords)
+        moved = False
+
+        for i in range(n):
+            for j in range(i + 1, n):
+                delta = coords[j] - coords[i]
+                distance = np.linalg.norm(delta)
+                required = required_distances[i, j]
+
+                if distance + tol_data >= required:
+                    continue
+
+                moved = True
+                if distance < 1e-12:
+                    anchor_delta = anchors[j] - anchors[i]
+                    if np.linalg.norm(anchor_delta) < 1e-12:
+                        angle = 2 * np.pi * ((j - i) / max(n, 2))
+                        direction = np.array([np.cos(angle), np.sin(angle)])
+                    else:
+                        direction = anchor_delta / np.linalg.norm(anchor_delta)
+                else:
+                    direction = delta / distance
+
+                overlap = required - distance
+                total_mass = masses[i] + masses[j]
+                move_i = overlap * (masses[j] / total_mass)
+                move_j = overlap * (masses[i] / total_mass)
+
+                displacement[i] -= move_i * direction
+                displacement[j] += move_j * direction
+
+        if not moved:
+            break
+
+        norms = np.linalg.norm(displacement, axis=1)
+        max_norm = max(norms.max(), 1e-9)
+        if max_norm > step_cap:
+            displacement *= step_cap / max_norm
+
+        coords += displacement
+
+        if pull_strength > 0:
+            coords = (1 - pull_strength) * coords + pull_strength * anchors
+
+    margin = float(required_clip.max())
+    mins = coords.min(axis=0) - margin
+    maxs = coords.max(axis=0) + margin
+    frame_center = np.array([0.5 * (xlim[0] + xlim[1]), 0.5 * (ylim[0] + ylim[1])])
+    layout_center = 0.5 * (mins + maxs)
+    coords = coords + (frame_center - layout_center)
+
+    return {node: coords[idx] for idx, node in enumerate(nodes)}
+
+
 __all__ = [
     "np",
     "pd",
@@ -432,4 +604,9 @@ __all__ = [
     "load_gapminder",
     "load_penguins",
     "load_bivariate_normal_demo",
+    "STANDARD_PANEL_SIZE",
+    "compute_node_radii",
+    "overlap_metrics",
+    "overlap_diagnostics",
+    "resolve_node_collisions",
 ]

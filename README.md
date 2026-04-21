@@ -27,6 +27,10 @@ Course materials for **Network Science** at the University of Turin (UNITO).
 | 8 | Network Models | [ns08-network-models.pdf](netsci/slides/ns08-network-models.pdf) | [08a-configuration-model.ipynb](netsci/tutorials/src/08a-configuration-model.ipynb), [08b-er-random-graphs.ipynb](netsci/tutorials/src/08b-er-random-graphs.ipynb), [08c-watts-strogatz.ipynb](netsci/tutorials/src/08c-watts-strogatz.ipynb) |
 | 9 | Preferential Attachment | [ns09-preferential-attachment.pdf](netsci/slides/ns09-preferential-attachment.pdf) | [09a-barabasi-albert.ipynb](netsci/tutorials/src/09a-barabasi-albert.ipynb) |
 | 10 | Extensions of Preferential Attachment | [ns10-preferential-attachment-extensions.pdf](netsci/slides/ns10-preferential-attachment-extensions.pdf) | [10a-attractiveness-model.ipynb](netsci/tutorials/src/10a-attractiveness-model.ipynb), [10b-fitness-model.ipynb](netsci/tutorials/src/10b-fitness-model.ipynb), [10c-random-walk-model.ipynb](netsci/tutorials/src/10c-random-walk-model.ipynb), [10d-copy-model.ipynb](netsci/tutorials/src/10d-copy-model.ipynb) |
+| 11 | Rich-Get-Richer and Power Laws | [ns11-rgr.pdf](netsci/slides/ns11-rgr.pdf) | [11a-powerlaw.ipynb](netsci/tutorials/src/11a-powerlaw.ipynb), [11b-rich-get-richer.ipynb](netsci/tutorials/src/11b-rich-get-richer.ipynb) |
+| 12 | Communities | [ns12-communities.pdf](netsci/slides/ns12-communities.pdf) | [12-communities-fundamentals.ipynb](netsci/tutorials/src/12-communities-fundamentals.ipynb) |
+| 13 | Community Detection | [ns13-community-detection.pdf](netsci/slides/ns13-community-detection.pdf) | [13-community-detection-modularity.ipynb](netsci/tutorials/src/13-community-detection-modularity.ipynb) |
+| 14 | Community Benchmarks | [ns14-communities-benchmarks.pdf](netsci/slides/ns14-communities-benchmarks.pdf) | [14-label-propagation-and-evaluation.ipynb](netsci/tutorials/src/14-label-propagation-and-evaluation.ipynb) |
 
 ---
 
@@ -47,6 +51,19 @@ Course materials for **Network Science** at the University of Turin (UNITO).
 | 2 | Nested Model, Data & Task Abstractions | [dv02-model-data-task-abstractions.pdf](dataviz/slides/dv02-model-data-task-abstractions.pdf) | |
 | 3 | Marks, Channels, and Color | [dv03-marks-channels-color.pdf](dataviz/slides/dv03-marks-channels-color.pdf) | |
 | 4 | Tables | [dv04-tables.pdf](dataviz/slides/dv04-tables.pdf) | |
+
+### Tutorials
+
+**Networks** — `dataviz/tutorials/04-networks/`
+
+| # | Notebook | Description |
+|---|---|---|
+| 01 | [`01-networkx-drawing-basics.ipynb`](dataviz/tutorials/04-networks/01-networkx-drawing-basics.ipynb) | From `nx.draw()` to layered rendering; data-driven visual encoding with size and colour. |
+| 02 | [`02-network-layouts.ipynb`](dataviz/tutorials/04-networks/02-network-layouts.ipynb) | Spring and Kamada-Kawai layout principles; measuring and removing node-marker overlap in rendered space. |
+| 03 | [`03-network-labels.ipynb`](dataviz/tutorials/04-networks/03-network-labels.ipynb) | Principled label placement on dense networks; measurable label overlap as a rendering problem. |
+| 04 | [`04-game-of-thrones-network-case-study.ipynb`](dataviz/tutorials/04-networks/04-game-of-thrones-network-case-study.ipynb) | Community detection and a publication-ready composite figure on the GOT Book 1 graph. |
+| 05 | [`05-networks-and-space.ipynb`](dataviz/tutorials/04-networks/05-networks-and-space.ipynb) | Spatial networks and geographic embedding. |
+| 06 | [`06-networks-plotly.ipynb`](dataviz/tutorials/04-networks/06-networks-plotly.ipynb) | Interactive counterpart — Plotly's two-trace pattern, `updatemenus`, sliders, neighbourhood highlighting, and a Pyvis alternative. |
 
 ---
 
