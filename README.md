@@ -28,10 +28,9 @@ Course materials for **Network Science** at the University of Turin (UNITO).
 | 9 | Preferential Attachment | [ns09-preferential-attachment.pdf](netsci/slides/ns09-preferential-attachment.pdf) | [09a-barabasi-albert.ipynb](netsci/tutorials/src/09a-barabasi-albert.ipynb) |
 | 10 | Extensions of Preferential Attachment | [ns10-preferential-attachment-extensions.pdf](netsci/slides/ns10-preferential-attachment-extensions.pdf) | [10a-attractiveness-model.ipynb](netsci/tutorials/src/10a-attractiveness-model.ipynb), [10b-fitness-model.ipynb](netsci/tutorials/src/10b-fitness-model.ipynb), [10c-random-walk-model.ipynb](netsci/tutorials/src/10c-random-walk-model.ipynb), [10d-copy-model.ipynb](netsci/tutorials/src/10d-copy-model.ipynb) |
 | 11 | Rich-Get-Richer and Power Laws | [ns11-rgr.pdf](netsci/slides/ns11-rgr.pdf) | [11a-powerlaw.ipynb](netsci/tutorials/src/11a-powerlaw.ipynb), [11b-rich-get-richer.ipynb](netsci/tutorials/src/11b-rich-get-richer.ipynb) |
-| 12 | Communities: Concepts, Definitions, and Mesoscopic Structure | [ns12-communities.pdf](netsci/slides/ns12-communities.pdf) | [12-communities-fundamentals.ipynb](netsci/tutorials/src/12-communities-fundamentals.ipynb) |
-| 13 | Community Detection I: Modularity and Classical Methods | [ns13-community-detection.pdf](netsci/slides/ns13-community-detection.pdf) | [13-community-detection-modularity.ipynb](netsci/tutorials/src/13-community-detection-modularity.ipynb) |
-| 14 | Community Detection II: Modern Methods | [ns14-community-detection-modern-methods.pdf](netsci/slides/ns14-community-detection-modern-methods.pdf) | [14-label-propagation-and-evaluation.ipynb](netsci/tutorials/src/14-label-propagation-and-evaluation.ipynb) |
-| 15 | Community Detection III: Inference and Evaluation | [ns15-community-detection-inference-evaluation.pdf](netsci/slides/ns15-community-detection-inference-evaluation.pdf) | |
+| 12 | Communities | [ns12-communities.pdf](netsci/slides/ns12-communities.pdf) | [12-communities-fundamentals.ipynb](netsci/tutorials/src/12-communities-fundamentals.ipynb) |
+| 13 | Community Detection | [ns13-community-detection.pdf](netsci/slides/ns13-community-detection.pdf) | [13-community-detection-modularity.ipynb](netsci/tutorials/src/13-community-detection-modularity.ipynb) |
+| 14 | Community Benchmarks | [ns14-communities-benchmarks.pdf](netsci/slides/ns14-communities-benchmarks.pdf) | [14-label-propagation-and-evaluation.ipynb](netsci/tutorials/src/14-label-propagation-and-evaluation.ipynb) |
 | 16 | Games on Networks and Strategic Interaction | [ns16-games-on-networks.pdf](netsci/slides/ns16-games-on-networks.pdf) | |
 | 17 | Traffic Networks and Selfish Routing | [ns17-traffic-networks.pdf](netsci/slides/ns17-traffic-networks.pdf) | |
 
