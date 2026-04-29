@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>10b — basic bar chart</title>
+    <style>
+        body { margin: 1em; font-family: -apple-system, BlinkMacSystemFont,
+                                          "Segoe UI", Roboto, sans-serif; }
+        svg  { border: 1px solid #ddd; background: white; }
+        .axis text { font-size: 13px; fill: #555; }
+        .axis path, .axis line { stroke: #bbb; }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div id="demo"></div>
+    <script>
+        const CANVAS = {
+            width:  700,
+            margin: { top: 24, right: 30, bottom: 36, left: 50 }
+        };
+        function makeCanvas(selector, height, opts = {}) {
+            const m = { ...CANVAS.margin, ...(opts.margin || {}) };
+            const w = opts.width ?? CANVAS.width;
+            const innerW = w - m.left - m.right;
+            const innerH = height - m.top - m.bottom;
+            const root = d3.select(selector).append("svg")
+                .attr("width", w).attr("height", height)
+                .style("background", "#fafafa").style("border", "1px solid #ddd");
+            const plot = root.append("g")
+                .attr("transform", `translate(${m.left}, ${m.top})`);
+            return { root, plot, innerW, innerH, margin: m, width: w, height };
+        }
+        const PALETTE = {
+            Africa: "#009E73", Americas: "#D55E00", Asia: "#0072B2",
+            Europe: "#CC79A7", Oceania: "#E69F00"
+        };
+        const c = makeCanvas("#demo", 360, { margin: { top: 30, bottom: 50 } });
+        d3.csv("../../datasets/gapminder.csv", d => ({
+            continent: d.continent, year: +d.year, lifeExp: +d.lifeExp
+        })).then(rows => {
+            const data2007 = rows.filter(d => d.year === 2007);
+            const meanByContinent = d3.rollup(data2007,
+                v => d3.mean(v, d => d.lifeExp), d => d.continent);
+            const barData = Array.from(meanByContinent, ([continent, mean]) => ({ continent, mean }))
+                .sort((a, b) => d3.ascending(a.mean, b.mean));
+
+            const x = d3.scaleBand().domain(barData.map(d => d.continent))
+                .range([0, c.innerW]).padding(0.15);
+            const y = d3.scaleLinear().domain([0, d3.max(barData, d => d.mean)]).nice()
+                .range([c.innerH, 0]);
+
+            c.plot.append("g").attr("class", "axis")
+                .attr("transform", `translate(0, ${c.innerH})`)
+                .call(d3.axisBottom(x));
+            c.plot.append("g").attr("class", "axis")
+                .call(d3.axisLeft(y).tickFormat(d3.format(".0f")));
+
+            c.plot.selectAll("rect.bar").data(barData).join("rect")
+                .attr("class", "bar")
+                .attr("x", d => x(d.continent))
+                .attr("y", d => y(d.mean))
+                .attr("width", x.bandwidth())
+                .attr("height", d => c.innerH - y(d.mean))
+                .attr("fill", d => PALETTE[d.continent]).attr("opacity", 0.85);
+
+            c.plot.selectAll("text.value").data(barData).join("text")
+                .attr("class", "value")
+                .attr("x", d => x(d.continent) + x.bandwidth() / 2)
+                .attr("y", d => y(d.mean) - 6)
+                .attr("text-anchor", "middle")
+                .style("font-size", "13px").attr("fill", "#333")
+                .text(d => d3.format(".1f")(d.mean));
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>10c — Update Pattern and selection.join</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="./_shared/chart.js"></script>
+    <link rel="stylesheet" href="./_shared/chart.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/styles/github.min.css">
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/highlight.min.js"></script>
+    <script>document.addEventListener("DOMContentLoaded", () => hljs.highlightAll());</script>
+</head>
+
+<body>
+    <h1>10c — Update Pattern and <code>selection.join</code></h1>
+    <p class="lead">Static charts answer one question for one dataset. Real visualizations <em>change</em>:
+        users filter, sort, scrub a slider, switch a year. The data join is what keeps the DOM in sync with
+        the data on every change. This tutorial covers the <strong>General Update Pattern</strong>, why
+        <strong>key functions</strong> matter, and how <code>selection.join()</code> is the modern shortcut
+        for all of it.</p>
+
+    <h2>1. Why updates matter</h2>
+    <p>Most useful charts respond to change:</p>
+    <ul>
+        <li>filter the data — one continent, one year, one threshold</li>
+        <li>sort the bars — alphabetical or by value</li>
+        <li>scrub a year slider — re-render the same chart for a new snapshot</li>
+        <li>animate between states — transitions on enter and exit</li>
+    </ul>
+    <p>Calling the join with the new data array does <em>all</em> of this. The same code that drew the chart
+        the first time updates it on every subsequent call.</p>
+
+    <h2>2. Recap: enter, update, exit</h2>
+    <p>From <code>09b</code> — the join compares the data array to the existing DOM elements and produces
+        three sub-selections:</p>
+    <ul>
+        <li><strong>enter</strong> — data rows with no matching element yet → D3 creates one</li>
+        <li><strong>update</strong> — data rows that already match an existing element → D3 keeps it</li>
+        <li><strong>exit</strong> — DOM elements whose data has disappeared → D3 removes them</li>
+    </ul>
+    <p>This three-way split is called the <strong>General Update Pattern</strong> (GUP). Modern D3 hides it
+        behind a single call (<code>.join("circle")</code>), but understanding the pattern is what makes
+        custom enter/update/exit behaviour readable.</p>
+
+    <h2>3. The older explicit pattern</h2>
+    <p>Before <code>selection.join</code> existed (D3 v5+), every update wrote the three sub-selections by
+        hand. You will still see this in older examples:</p>
+    <pre><code>// older pattern — three sub-selections, .merge() to combine enter+update
+const sel = svg.selectAll("circle").data(data, d =&gt; d.id);
+
+sel.exit().remove();                         // 1. remove old
+
+sel.enter()                                   // 2. create new
+    .append("circle")
+    .attr("fill", "steelblue")
+  .merge(sel)                                 // 3. enter + update together
+    .attr("cx", d =&gt; x(d.value))
+    .attr("cy", d =&gt; y(d.group))
+    .attr("r", 5);</code></pre>
+    <p>The pattern works but is verbose. <code>selection.join</code> is the modern shortcut.</p>
+
+    <h2>4. <code>selection.join()</code> — the modern default</h2>
+    <p>One line replaces the entire dance:</p>
+    <pre><code>svg.selectAll("circle")
+    .data(data, d =&gt; d.id)
+    .join("circle")            // ← creates / keeps / removes circles to match the data
+        .attr("cx", d =&gt; x(d.value))
+        .attr("cy", d =&gt; y(d.group))
+        .attr("r", 5)
+        .attr("fill", "steelblue");</code></pre>
+    <p>Pass <code>"circle"</code> (or any tag name) and D3 handles enter, update, and exit for you. Attribute
+        calls after the join run on the merged selection — both the freshly created and the kept-around
+        circles get them. This is the form to write first.</p>
+
+    <h2>5. Keys preserve object identity</h2>
+    <p>The second argument to <code>.data()</code> is the <strong>key function</strong>:</p>
+    <pre><code>.data(data, d =&gt; d.id)</code></pre>
+    <p>Without a key, D3 matches data to elements <strong>by index</strong>. That is fine for a one-shot
+        chart, but breaks the moment the data is sorted, filtered, or shuffled — D3 thinks the first row
+        always corresponds to the first DOM element, even after a sort.</p>
+    <p>The demo below has the same five items and a "shuffle" button. Switch between
+        <strong>index join</strong> and <strong>key join</strong> to see the difference: with index join, a
+        shuffle re-uses the existing circles in their old positions and just re-labels them; with key join,
+        each circle keeps its identity (and its colour) when its position changes.</p>
+    <p>
+        <button id="shuffle-btn">Shuffle the data</button>
+        <label style="margin-left: 1em;">
+            <input type="radio" name="join-mode" value="index"> index join
+        </label>
+        <label>
+            <input type="radio" name="join-mode" value="key" checked> key join
+        </label>
+    </p>
+    <div class="container" id="demo-keys"></div>
+
+    <h2>6. Custom join behaviour — three callbacks</h2>
+    <p>For richer behaviour, <code>.join</code> accepts three callbacks — one per sub-selection:</p>
+    <pre><code>selection.data(data, d =&gt; d.id)
+    .join(
+        enter  =&gt; enter.append("circle")
+            .attr("r", 0)                                          // start invisible
+            .attr("fill", "#009E73")                               // green for new
+            .call(en =&gt; en.transition().duration(400)
+                .attr("r", 6)),                                    // grow into place
+
+        update =&gt; update
+            .attr("fill", "#0072B2"),                              // blue for kept
+
+        exit   =&gt; exit
+            .attr("fill", "#D55E00")
+            .call(ex =&gt; ex.transition().duration(300)
+                .attr("r", 0).remove())                            // shrink and go
+    );</code></pre>
+    <p>Each callback returns a selection. D3 merges <code>enter</code>'s return value with the update
+        selection automatically, so subsequent <code>.attr</code> calls on the result of <code>.join(...)</code>
+        run on both new and kept elements.</p>
+    <p>The demo below uses this exact form — entering circles fade in green, updating circles stay blue,
+        exiting circles flash orange before shrinking out:</p>
+    <p>
+        <button id="cycle-btn">Cycle dataset (5 → 8 → 5 → 8 …)</button>
+    </p>
+    <div class="container" id="demo-custom-join"></div>
+
+    <div class="note"><strong>Takeaway.</strong> Every D3 chart that responds to change runs the same three
+        steps: bind the new data with a <em>key function</em>, call <code>.join</code>, and let it create /
+        keep / remove elements. For animated or differentiated entry/exit, pass three callbacks. The next
+        tutorial — <code>10d</code> — adds <strong>transitions</strong>, the language D3 uses to make those
+        changes visible over time.</div>
+
+    <p class="tutorial-nav"><a href="10b-bar-charts-and-stack.html">← 10b — Bars and d3.stack</a> ·
+        <a href="index.html">L10 index</a> ·
+        <a href="10d-transitions.html">10d — Transitions →</a></p>
+
+    <script>
+        // ============================================================
+        // §5. Key vs index join
+        // ============================================================
+        const labels = ["A", "B", "C", "D", "E"];
+        const baseColors = {
+            A: "#0072B2", B: "#E69F00", C: "#009E73", D: "#D55E00", E: "#CC79A7"
+        };
+        let order = [...labels];
+
+        const cKeys = makeCanvas("#demo-keys", 200, { margin: { top: 30, bottom: 50 } });
+        const yMid = cKeys.innerH / 2;
+        const slot = i => 60 + i * 100;
+
+        function renderKeys() {
+            const mode = document.querySelector('input[name="join-mode"]:checked').value;
+            const data = order.map(label => ({ id: label, label }));
+
+            // bind with EITHER an index join OR a key join
+            const sel = cKeys.plot.selectAll("g.item")
+                .data(data, mode === "key" ? (d => d.id) : null);
+
+            sel.exit().transition().duration(300).attr("opacity", 0).remove();
+
+            const enter = sel.enter().append("g").attr("class", "item").attr("opacity", 1);
+            enter.append("circle").attr("r", 22).attr("stroke", "white").attr("stroke-width", 2);
+            enter.append("text")
+                .attr("text-anchor", "middle").attr("dy", 5)
+                .style("font-size", "16px").style("font-weight", "bold").attr("fill", "white");
+
+            sel.merge(enter)
+                .transition().duration(500)
+                .attr("transform", (d, i) => `translate(${slot(i)}, ${yMid})`);
+            sel.merge(enter).select("circle")
+                .attr("fill", d => baseColors[d.label]);
+            sel.merge(enter).select("text").text(d => d.label);
+        }
+
+        renderKeys();
+        document.getElementById("shuffle-btn").addEventListener("click", () => {
+            order = d3.shuffle([...order]);
+            renderKeys();
+        });
+        document.querySelectorAll('input[name="join-mode"]').forEach(r =>
+            r.addEventListener("change", renderKeys));
+
+        // ============================================================
+        // §6. Custom join behaviour
+        // ============================================================
+        const cCustom = makeCanvas("#demo-custom-join", 200, { margin: { top: 30, bottom: 30 } });
+        const allIds = d3.range(1, 11);   // 1..10 are possible
+        let visibleSet = new Set([1, 2, 3, 4, 5]);
+
+        function renderCustom() {
+            const data = allIds.filter(id => visibleSet.has(id)).map(id => ({ id }));
+            const slotW = cCustom.innerW / 10;
+            const yC = cCustom.innerH / 2;
+
+            cCustom.plot.selectAll("circle")
+                .data(data, d => d.id)
+                .join(
+                    enter => enter.append("circle")
+                        .attr("cx", d => slotW * (d.id - 0.5))
+                        .attr("cy", yC)
+                        .attr("r", 0)
+                        .attr("fill", "#009E73")             // green for entering
+                        .attr("opacity", 0.85)
+                        .call(en => en.transition().duration(400).attr("r", 18)),
+                    update => update
+                        .attr("fill", "#0072B2"),            // blue for kept
+                    exit => exit
+                        .attr("fill", "#D55E00")             // orange for exiting
+                        .call(ex => ex.transition().duration(300).attr("r", 0).remove())
+                );
+
+            cCustom.plot.selectAll("text.id")
+                .data(data, d => d.id)
+                .join(
+                    enter => enter.append("text").attr("class", "id")
+                        .attr("x", d => slotW * (d.id - 0.5))
+                        .attr("y", yC + 4)
+                        .attr("text-anchor", "middle")
+                        .style("font-size", "12px").style("font-weight", "bold")
+                        .attr("fill", "white").attr("opacity", 0)
+                        .text(d => d.id)
+                        .call(en => en.transition().duration(400).attr("opacity", 1)),
+                    update => update,
+                    exit => exit.transition().duration(300).attr("opacity", 0).remove()
+                );
+        }
+        renderCustom();
+        document.getElementById("cycle-btn").addEventListener("click", () => {
+            // alternate between {1..5} and {3..10}
+            visibleSet = visibleSet.has(1)
+                ? new Set([3, 4, 5, 6, 7, 8, 9, 10])
+                : new Set([1, 2, 3, 4, 5]);
+            renderCustom();
+        });
+    </script>
+</body>
+
+</html>

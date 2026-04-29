@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>10c — key vs index join</title>
+    <style>
+        body { margin: 1em; font-family: -apple-system, BlinkMacSystemFont,
+                                          "Segoe UI", Roboto, sans-serif; }
+        svg  { border: 1px solid #ddd; background: white; }
+        .axis text { font-size: 13px; fill: #555; }
+        .axis path, .axis line { stroke: #bbb; }
+        label { margin-right: 1em; }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <p>
+        <button id="shuffle-btn">Shuffle the data</button>
+        <label style="margin-left: 1em;">
+            <input type="radio" name="join-mode" value="index"> index join
+        </label>
+        <label>
+            <input type="radio" name="join-mode" value="key" checked> key join
+        </label>
+    </p>
+    <div id="demo"></div>
+    <script>
+        const CANVAS = {
+            width:  700,
+            margin: { top: 24, right: 30, bottom: 36, left: 50 }
+        };
+        function makeCanvas(selector, height, opts = {}) {
+            const m = { ...CANVAS.margin, ...(opts.margin || {}) };
+            const w = opts.width ?? CANVAS.width;
+            const innerW = w - m.left - m.right;
+            const innerH = height - m.top - m.bottom;
+            const root = d3.select(selector).append("svg")
+                .attr("width", w).attr("height", height)
+                .style("background", "#fafafa").style("border", "1px solid #ddd");
+            const plot = root.append("g")
+                .attr("transform", `translate(${m.left}, ${m.top})`);
+            return { root, plot, innerW, innerH, margin: m, width: w, height };
+        }
+        const labels = ["A", "B", "C", "D", "E"];
+        const baseColors = {
+            A: "#0072B2", B: "#E69F00", C: "#009E73", D: "#D55E00", E: "#CC79A7"
+        };
+        let order = [...labels];
+
+        const c = makeCanvas("#demo", 200, { margin: { top: 30, bottom: 50 } });
+        const yMid = c.innerH / 2;
+        const slot = i => 60 + i * 100;
+
+        function render() {
+            const mode = document.querySelector('input[name="join-mode"]:checked').value;
+            const data = order.map(label => ({ id: label, label }));
+            const sel = c.plot.selectAll("g.item")
+                .data(data, mode === "key" ? (d => d.id) : null);
+            sel.exit().transition().duration(300).attr("opacity", 0).remove();
+            const enter = sel.enter().append("g").attr("class", "item").attr("opacity", 1);
+            enter.append("circle").attr("r", 22).attr("stroke", "white").attr("stroke-width", 2);
+            enter.append("text")
+                .attr("text-anchor", "middle").attr("dy", 5)
+                .style("font-size", "16px").style("font-weight", "bold").attr("fill", "white");
+            sel.merge(enter)
+                .transition().duration(500)
+                .attr("transform", (d, i) => `translate(${slot(i)}, ${yMid})`);
+            sel.merge(enter).select("circle")
+                .attr("fill", d => baseColors[d.label]);
+            sel.merge(enter).select("text").text(d => d.label);
+        }
+        render();
+        document.getElementById("shuffle-btn").addEventListener("click", () => {
+            order = d3.shuffle([...order]);
+            render();
+        });
+        document.querySelectorAll('input[name="join-mode"]').forEach(r =>
+            r.addEventListener("change", render));
+    </script>
+</body>
+</html>

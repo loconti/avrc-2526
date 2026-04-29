@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>10a — SVG Paths and the Line / Area Generators</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="./_shared/chart.js"></script>
+    <link rel="stylesheet" href="./_shared/chart.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/styles/github.min.css">
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/highlight.min.js"></script>
+    <script>document.addEventListener("DOMContentLoaded", () => hljs.highlightAll());</script>
+</head>
+
+<body>
+    <h1>10a — SVG Paths and the Line / Area Generators</h1>
+    <p class="lead">A single <code>&lt;path&gt;</code> can draw any 2D shape — straight or curved, open or closed.
+        Writing the path string by hand is tedious; D3 ships <strong>path generators</strong>
+        (<code>d3.line</code>, <code>d3.area</code>) that turn an array of data into a valid <code>d</code>
+        attribute. This is what powers every line chart, area chart, and curved shape in D3.</p>
+
+    <h2>1. The SVG path mini-language</h2>
+    <p>An SVG <code>&lt;path&gt;</code> stores its geometry in the <code>d</code> attribute — a string of
+        commands and coordinates:</p>
+    <pre><code>&lt;path d="M 20 120 L 100 40 L 180 90" /&gt;</code></pre>
+    <p>The most common commands:</p>
+    <table>
+        <thead><tr><th>Command</th><th>Meaning</th></tr></thead>
+        <tbody>
+            <tr><td><code>M x y</code></td><td><strong>MoveTo</strong> — lift the pen to <code>(x, y)</code></td></tr>
+            <tr><td><code>L x y</code></td><td><strong>LineTo</strong> — draw a line to <code>(x, y)</code></td></tr>
+            <tr><td><code>Q cx cy x y</code></td><td>quadratic Bezier curve through control point <code>(cx, cy)</code></td></tr>
+            <tr><td><code>C c1x c1y c2x c2y x y</code></td><td>cubic Bezier curve through two control points</td></tr>
+            <tr><td><code>A rx ry … x y</code></td><td>elliptical arc</td></tr>
+            <tr><td><code>Z</code></td><td>close the path back to the starting point</td></tr>
+        </tbody>
+    </table>
+    <p>Lower-case commands (<code>m</code>, <code>l</code>, <code>c</code>) mean <em>relative</em> coordinates
+        instead of absolute. The full path mini-language is small but powerful — every D3 generator below
+        produces strings like the one above.</p>
+
+    <h2>2. Reading a path string step by step</h2>
+    <p>The browser executes commands in order. For
+        <code>M 20 120  L 100 40  L 180 90  Z</code>:
+    </p>
+    <ol>
+        <li><code>M 20 120</code> — pen moves to <code>(20, 120)</code>. Nothing drawn yet.</li>
+        <li><code>L 100 40</code> — line from <code>(20, 120)</code> to <code>(100, 40)</code>.</li>
+        <li><code>L 180 90</code> — line from <code>(100, 40)</code> to <code>(180, 90)</code>.</li>
+        <li><code>Z</code> — line back to the start <code>(20, 120)</code> — closes the triangle.</li>
+    </ol>
+    <pre><code>// triangle, written by hand
+svg.append("path")
+    .attr("d", "M 20 120 L 100 40 L 180 90 Z")
+    .attr("fill", "#0072B2");</code></pre>
+    <div class="container" id="demo-handwritten"></div>
+
+    <h2>3. <code>d3.line</code> — the line generator</h2>
+    <p>For a chart, you don't write the <code>d</code> string by hand. <code>d3.line()</code> is a function
+        builder: configure how to extract <code>x</code> and <code>y</code> from each datum, then call it on
+        the array to produce the path string.</p>
+    <pre><code>const line = d3.line()
+    .x(d =&gt; xScale(d.year))
+    .y(d =&gt; yScale(d.value));
+
+svg.append("path")
+    .datum(timeSeries)         // bind the WHOLE array to one element
+    .attr("d", line)           // line(timeSeries) → "M … L … L …"
+    .attr("fill", "none")
+    .attr("stroke", "#0072B2")
+    .attr("stroke-width", 2);</code></pre>
+    <div class="container" id="demo-line"></div>
+
+    <h2>4. <code>.datum()</code> versus <code>.data()</code></h2>
+    <p>This distinction trips up everybody once.</p>
+    <ul>
+        <li><strong><code>.data(array)</code></strong> binds <em>each row</em> of the array to <em>one
+                element</em> in the selection. Used for scatterplots, bar charts — one mark per row.</li>
+        <li><strong><code>.datum(value)</code></strong> binds <em>one whole value</em> (often the entire
+            array) to <em>one element</em>. Used for line charts and area charts — one path that consumes
+            many rows.</li>
+    </ul>
+    <pre><code>// scatterplot: one circle per row
+svg.selectAll("circle")
+    .data(rows)               // ← data, plural
+    .join("circle")
+    ...
+
+// line chart: one path consuming the whole array
+svg.append("path")
+    .datum(rows)              // ← datum, singular
+    .attr("d", line);</code></pre>
+
+    <h2>5. Curves are design choices</h2>
+    <p>By default <code>d3.line</code> connects points with straight segments. For smoother shapes, configure
+        a <code>.curve(...)</code>:</p>
+    <pre><code>const line = d3.line()
+    .x(d =&gt; x(d.year))
+    .y(d =&gt; y(d.value))
+    .curve(d3.curveMonotoneX);   // ← here</code></pre>
+    <p>Common curves, each with a distinct visual character:</p>
+    <ul>
+        <li><code>curveLinear</code> — straight segments (default)</li>
+        <li><code>curveStep</code> — horizontal-then-vertical step changes</li>
+        <li><code>curveStepAfter</code>, <code>curveStepBefore</code> — variants of step</li>
+        <li><code>curveMonotoneX</code> — smooth, restrained, never overshoots vertically</li>
+        <li><code>curveCatmullRom</code> — smoother, more decorative</li>
+        <li><code>curveBasis</code> — heavily smoothed, may not pass through points</li>
+    </ul>
+    <p>Same nine-point series, six curves:</p>
+    <div class="container" id="demo-curves"></div>
+    <p>Smoothing is a design choice. Use it to clarify the data, not to invent structure that isn't there.
+        <code>curveStep</code> is honest about discrete change; <code>curveMonotoneX</code> is the safe default
+        for continuous data.</p>
+
+    <h2>6. <code>d3.area</code> — the area generator</h2>
+    <p>An area chart is also one <code>&lt;path&gt;</code>, but the path needs both an upper and a lower
+        boundary. <code>d3.area()</code> takes <code>x</code>, <code>y0</code> (lower edge), and
+        <code>y1</code> (upper edge):</p>
+    <pre><code>const area = d3.area()
+    .x(d =&gt; xScale(d.year))
+    .y0(innerH)                // baseline = bottom of the plot
+    .y1(d =&gt; yScale(d.value));
+
+svg.append("path")
+    .datum(timeSeries)
+    .attr("d", area)
+    .attr("fill", "#0072B2")
+    .attr("opacity", 0.3);</code></pre>
+    <div class="container" id="demo-area"></div>
+    <p>Same data, same generator pattern as <code>d3.line</code> — only the configuration differs. Both can
+        take a <code>.curve(...)</code>.</p>
+
+    <h2>7. The same data, line + area together</h2>
+    <p>A common composition: a filled area underneath plus a stroked line on top. Both consume the same array,
+        bound via <code>.datum(...)</code>:</p>
+    <div class="container" id="demo-combined"></div>
+
+    <div class="note"><strong>Takeaway.</strong> Path generators are the bridge between numeric data and SVG
+        path strings. The same five-method pattern (<code>const gen = d3.line(); gen.x(); gen.y();
+        path.datum(data); path.attr("d", gen)</code>) covers lines, areas, arcs, and any custom shape the
+        chart needs. Next: <code>10b</code> uses <code>scaleBand</code> + rectangles for bar charts, then
+        <code>d3.stack</code> for stacked bar charts.</div>
+
+    <p class="tutorial-nav"><a href="index.html">← L10 index</a> ·
+        <a href="10b-bar-charts-and-stack.html">10b — Bar charts and d3.stack →</a></p>
+
+    <script>
+        // ---------- 2. hand-written triangle ----------
+        {
+            const c = makeCanvas("#demo-handwritten", 200, {
+                margin: { top: 20, right: 30, bottom: 20, left: 30 }
+            });
+            c.plot.append("path")
+                .attr("d", "M 20 120 L 100 40 L 180 90 Z")
+                .attr("fill", "#0072B2");
+            c.plot.append("text").attr("x", 0).attr("y", -8)
+                .style("font-size", "13px").attr("fill", "#666")
+                .text('d = "M 20 120 L 100 40 L 180 90 Z"');
+        }
+
+        // ---------- 3. line generator ----------
+        const series = [
+            { year: 2010, value: 24 }, { year: 2011, value: 38 },
+            { year: 2012, value: 35 }, { year: 2013, value: 52 },
+            { year: 2014, value: 48 }, { year: 2015, value: 67 },
+            { year: 2016, value: 71 }, { year: 2017, value: 65 },
+            { year: 2018, value: 82 }
+        ];
+        {
+            const c = makeCanvas("#demo-line", 280);
+            const x = d3.scaleLinear().domain(d3.extent(series, d => d.year)).range([0, c.innerW]);
+            const y = d3.scaleLinear().domain([0, d3.max(series, d => d.value)]).nice().range([c.innerH, 0]);
+            c.plot.append("g").attr("class", "axis")
+                .attr("transform", `translate(0, ${c.innerH})`)
+                .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+            c.plot.append("g").attr("class", "axis").call(d3.axisLeft(y));
+
+            const line = d3.line().x(d => x(d.year)).y(d => y(d.value));
+            c.plot.append("path")
+                .datum(series).attr("d", line)
+                .attr("fill", "none").attr("stroke", "#0072B2").attr("stroke-width", 2);
+
+            // mark the underlying points so the path's anchor positions are visible
+            c.plot.selectAll("circle").data(series).join("circle")
+                .attr("cx", d => x(d.year)).attr("cy", d => y(d.value)).attr("r", 4)
+                .attr("fill", "#0072B2");
+        }
+
+        // ---------- 5. curves ----------
+        {
+            const c = makeCanvas("#demo-curves", 380, {
+                width: 720,
+                margin: { top: 24, right: 30, bottom: 36, left: 50 }
+            });
+            const halfW = c.innerW / 3;
+            const cellH = c.innerH / 2;
+            const variants = [
+                { name: "curveLinear",      c: d3.curveLinear,      color: "#0072B2", row: 0, col: 0 },
+                { name: "curveStep",        c: d3.curveStep,        color: "#D55E00", row: 0, col: 1 },
+                { name: "curveStepAfter",   c: d3.curveStepAfter,   color: "#009E73", row: 0, col: 2 },
+                { name: "curveMonotoneX",   c: d3.curveMonotoneX,   color: "#CC79A7", row: 1, col: 0 },
+                { name: "curveCatmullRom",  c: d3.curveCatmullRom,  color: "#E69F00", row: 1, col: 1 },
+                { name: "curveBasis",       c: d3.curveBasis,       color: "#7F3C8D", row: 1, col: 2 }
+            ];
+            const x = d3.scaleLinear().domain(d3.extent(series, d => d.year)).range([8, halfW - 8]);
+            const y = d3.scaleLinear().domain([0, d3.max(series, d => d.value)]).range([cellH - 18, 8]);
+
+            variants.forEach(v => {
+                const cell = c.plot.append("g")
+                    .attr("transform", `translate(${v.col * halfW}, ${v.row * cellH})`);
+                cell.append("rect")
+                    .attr("width", halfW - 4).attr("height", cellH - 4)
+                    .attr("fill", "none").attr("stroke", "#eee");
+                cell.append("text").attr("x", 8).attr("y", 16)
+                    .style("font-size", "12px").attr("fill", "#444").attr("font-weight", "600")
+                    .text(v.name);
+                const line = d3.line().x(d => x(d.year)).y(d => y(d.value)).curve(v.c);
+                cell.append("path")
+                    .datum(series).attr("d", line)
+                    .attr("fill", "none").attr("stroke", v.color).attr("stroke-width", 2);
+                cell.selectAll("circle").data(series).join("circle")
+                    .attr("cx", d => x(d.year)).attr("cy", d => y(d.value)).attr("r", 2.5)
+                    .attr("fill", v.color);
+            });
+        }
+
+        // ---------- 6. area ----------
+        {
+            const c = makeCanvas("#demo-area", 280);
+            const x = d3.scaleLinear().domain(d3.extent(series, d => d.year)).range([0, c.innerW]);
+            const y = d3.scaleLinear().domain([0, d3.max(series, d => d.value)]).nice().range([c.innerH, 0]);
+            c.plot.append("g").attr("class", "axis")
+                .attr("transform", `translate(0, ${c.innerH})`)
+                .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+            c.plot.append("g").attr("class", "axis").call(d3.axisLeft(y));
+
+            const area = d3.area()
+                .x(d => x(d.year))
+                .y0(c.innerH)
+                .y1(d => y(d.value))
+                .curve(d3.curveMonotoneX);
+            c.plot.append("path")
+                .datum(series).attr("d", area)
+                .attr("fill", "#0072B2").attr("opacity", 0.3);
+        }
+
+        // ---------- 7. line + area combined ----------
+        {
+            const c = makeCanvas("#demo-combined", 280);
+            const x = d3.scaleLinear().domain(d3.extent(series, d => d.year)).range([0, c.innerW]);
+            const y = d3.scaleLinear().domain([0, d3.max(series, d => d.value)]).nice().range([c.innerH, 0]);
+            c.plot.append("g").attr("class", "axis")
+                .attr("transform", `translate(0, ${c.innerH})`)
+                .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+            c.plot.append("g").attr("class", "axis").call(d3.axisLeft(y));
+
+            const area = d3.area().x(d => x(d.year)).y0(c.innerH).y1(d => y(d.value))
+                .curve(d3.curveMonotoneX);
+            const line = d3.line().x(d => x(d.year)).y(d => y(d.value))
+                .curve(d3.curveMonotoneX);
+
+            c.plot.append("path").datum(series).attr("d", area)
+                .attr("fill", "#0072B2").attr("opacity", 0.25);
+            c.plot.append("path").datum(series).attr("d", line)
+                .attr("fill", "none").attr("stroke", "#0072B2").attr("stroke-width", 2);
+            c.plot.selectAll("circle").data(series).join("circle")
+                .attr("cx", d => x(d.year)).attr("cy", d => y(d.value)).attr("r", 4)
+                .attr("fill", "#0072B2");
+        }
+    </script>
+</body>
+
+</html>

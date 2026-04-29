@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>10d — basic move</title>
+    <style>
+        body { margin: 1em; font-family: -apple-system, BlinkMacSystemFont,
+                                          "Segoe UI", Roboto, sans-serif; }
+        svg  { border: 1px solid #ddd; background: white; }
+        .axis text { font-size: 13px; fill: #555; }
+        .axis path, .axis line { stroke: #bbb; }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <p><button id="go">Move the dot</button></p>
+    <div id="demo"></div>
+    <script>
+        const CANVAS = {
+            width:  700,
+            margin: { top: 24, right: 30, bottom: 36, left: 50 }
+        };
+        function makeCanvas(selector, height, opts = {}) {
+            const m = { ...CANVAS.margin, ...(opts.margin || {}) };
+            const w = opts.width ?? CANVAS.width;
+            const innerW = w - m.left - m.right;
+            const innerH = height - m.top - m.bottom;
+            const root = d3.select(selector).append("svg")
+                .attr("width", w).attr("height", height)
+                .style("background", "#fafafa").style("border", "1px solid #ddd");
+            const plot = root.append("g")
+                .attr("transform", `translate(${m.left}, ${m.top})`);
+            return { root, plot, innerW, innerH, margin: m, width: w, height };
+        }
+        const c = makeCanvas("#demo", 120, { margin: { top: 20, right: 30, bottom: 20, left: 30 } });
+        const dot = c.plot.append("circle")
+            .attr("cx", 30).attr("cy", c.innerH / 2).attr("r", 18)
+            .attr("fill", "#0072B2");
+        let toRight = true;
+        document.getElementById("go").addEventListener("click", () => {
+            dot.transition().duration(750)
+                .attr("cx", toRight ? c.innerW - 30 : 30);
+            toRight = !toRight;
+        });
+    </script>
+</body>
+</html>

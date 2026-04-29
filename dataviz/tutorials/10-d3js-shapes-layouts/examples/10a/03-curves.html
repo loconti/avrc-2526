@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>10a — curve types</title>
+    <style>
+        body { margin: 1em; font-family: -apple-system, BlinkMacSystemFont,
+                                          "Segoe UI", Roboto, sans-serif; }
+        svg  { border: 1px solid #ddd; background: white; }
+        .axis text { font-size: 13px; fill: #555; }
+        .axis path, .axis line { stroke: #bbb; }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div id="demo"></div>
+    <script>
+        const CANVAS = {
+            width:  700,
+            margin: { top: 24, right: 30, bottom: 36, left: 50 }
+        };
+        function makeCanvas(selector, height, opts = {}) {
+            const m = { ...CANVAS.margin, ...(opts.margin || {}) };
+            const w = opts.width ?? CANVAS.width;
+            const innerW = w - m.left - m.right;
+            const innerH = height - m.top - m.bottom;
+            const root = d3.select(selector).append("svg")
+                .attr("width", w).attr("height", height)
+                .style("background", "#fafafa").style("border", "1px solid #ddd");
+            const plot = root.append("g")
+                .attr("transform", `translate(${m.left}, ${m.top})`);
+            return { root, plot, innerW, innerH, margin: m, width: w, height };
+        }
+        const series = [
+            { year: 2010, value: 24 }, { year: 2011, value: 38 },
+            { year: 2012, value: 35 }, { year: 2013, value: 52 },
+            { year: 2014, value: 48 }, { year: 2015, value: 67 },
+            { year: 2016, value: 71 }, { year: 2017, value: 65 },
+            { year: 2018, value: 82 }
+        ];
+        const c = makeCanvas("#demo", 380, {
+            width: 720, margin: { top: 24, right: 30, bottom: 36, left: 50 }
+        });
+        const halfW = c.innerW / 3;
+        const cellH = c.innerH / 2;
+        const variants = [
+            { name: "curveLinear",      cv: d3.curveLinear,      color: "#0072B2", row: 0, col: 0 },
+            { name: "curveStep",        cv: d3.curveStep,        color: "#D55E00", row: 0, col: 1 },
+            { name: "curveStepAfter",   cv: d3.curveStepAfter,   color: "#009E73", row: 0, col: 2 },
+            { name: "curveMonotoneX",   cv: d3.curveMonotoneX,   color: "#CC79A7", row: 1, col: 0 },
+            { name: "curveCatmullRom",  cv: d3.curveCatmullRom,  color: "#E69F00", row: 1, col: 1 },
+            { name: "curveBasis",       cv: d3.curveBasis,       color: "#7F3C8D", row: 1, col: 2 }
+        ];
+        const x = d3.scaleLinear().domain(d3.extent(series, d => d.year)).range([8, halfW - 8]);
+        const y = d3.scaleLinear().domain([0, d3.max(series, d => d.value)]).range([cellH - 18, 8]);
+        variants.forEach(v => {
+            const cell = c.plot.append("g")
+                .attr("transform", `translate(${v.col * halfW}, ${v.row * cellH})`);
+            cell.append("rect").attr("width", halfW - 4).attr("height", cellH - 4)
+                .attr("fill", "none").attr("stroke", "#eee");
+            cell.append("text").attr("x", 8).attr("y", 16)
+                .style("font-size", "12px").attr("fill", "#444").attr("font-weight", "600")
+                .text(v.name);
+            const line = d3.line().x(d => x(d.year)).y(d => y(d.value)).curve(v.cv);
+            cell.append("path").datum(series).attr("d", line)
+                .attr("fill", "none").attr("stroke", v.color).attr("stroke-width", 2);
+            cell.selectAll("circle").data(series).join("circle")
+                .attr("cx", d => x(d.year)).attr("cy", d => y(d.value)).attr("r", 2.5)
+                .attr("fill", v.color);
+        });
+    </script>
+</body>
+</html>

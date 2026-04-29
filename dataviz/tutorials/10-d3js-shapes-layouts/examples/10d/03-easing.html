@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>10d — easing comparison</title>
+    <style>
+        body { margin: 1em; font-family: -apple-system, BlinkMacSystemFont,
+                                          "Segoe UI", Roboto, sans-serif; }
+        svg  { border: 1px solid #ddd; background: white; }
+        .axis text { font-size: 13px; fill: #555; }
+        .axis path, .axis line { stroke: #bbb; }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <p><button id="go">Run all five</button></p>
+    <div id="demo"></div>
+    <script>
+        const CANVAS = {
+            width:  700,
+            margin: { top: 24, right: 30, bottom: 36, left: 50 }
+        };
+        function makeCanvas(selector, height, opts = {}) {
+            const m = { ...CANVAS.margin, ...(opts.margin || {}) };
+            const w = opts.width ?? CANVAS.width;
+            const innerW = w - m.left - m.right;
+            const innerH = height - m.top - m.bottom;
+            const root = d3.select(selector).append("svg")
+                .attr("width", w).attr("height", height)
+                .style("background", "#fafafa").style("border", "1px solid #ddd");
+            const plot = root.append("g")
+                .attr("transform", `translate(${m.left}, ${m.top})`);
+            return { root, plot, innerW, innerH, margin: m, width: w, height };
+        }
+        const c = makeCanvas("#demo", 280, { margin: { top: 20, right: 30, bottom: 20, left: 110 } });
+        const eases = [
+            { name: "easeLinear",      fn: d3.easeLinear,      color: "#666666" },
+            { name: "easeCubicInOut",  fn: d3.easeCubicInOut,  color: "#0072B2" },
+            { name: "easeBackOut",     fn: d3.easeBackOut,     color: "#E69F00" },
+            { name: "easeBounceOut",   fn: d3.easeBounceOut,   color: "#009E73" },
+            { name: "easeElasticOut",  fn: d3.easeElasticOut,  color: "#CC79A7" }
+        ];
+        const rowH = c.innerH / eases.length;
+        const dots = eases.map((e, i) => {
+            const yC = rowH * i + rowH / 2;
+            c.plot.append("text").attr("x", -8).attr("y", yC + 4)
+                .attr("text-anchor", "end")
+                .style("font-size", "12px").attr("fill", e.color)
+                .text(e.name);
+            c.plot.append("line").attr("x1", 10).attr("x2", c.innerW - 10)
+                .attr("y1", yC).attr("y2", yC).attr("stroke", "#eee");
+            return c.plot.append("circle")
+                .attr("cy", yC).attr("r", 9).attr("cx", 10).attr("fill", e.color);
+        });
+        document.getElementById("go").addEventListener("click", () => {
+            eases.forEach((e, i) => {
+                dots[i].interrupt().attr("cx", 10);
+                dots[i].transition().duration(1500).ease(e.fn).attr("cx", c.innerW - 10);
+            });
+        });
+    </script>
+</body>
+</html>

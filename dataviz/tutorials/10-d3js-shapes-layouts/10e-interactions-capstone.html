@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>10e — Interactions Capstone</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="./_shared/chart.js"></script>
+    <link rel="stylesheet" href="./_shared/chart.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/styles/github.min.css">
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/highlight.min.js"></script>
+    <script>document.addEventListener("DOMContentLoaded", () => hljs.highlightAll());</script>
+    <style>
+        #tooltip {
+            position: absolute;
+            pointer-events: none;
+            background: rgba(20, 20, 20, 0.92);
+            color: white;
+            padding: 0.4em 0.7em;
+            border-radius: 4px;
+            font-size: 12px;
+            line-height: 1.4;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>10e — Interactions Capstone</h1>
+    <p class="lead">A static chart answers one question. An interactive chart lets the reader ask their own.
+        This tutorial wires up the four pieces from L10 — generators, joins, transitions — into a single
+        Gapminder scatterplot that responds to <strong>hover</strong>, <strong>click</strong>, and a
+        <strong>year slider</strong>. Same data flow as every previous chart, with input events feeding
+        back into the join.</p>
+
+    <h2>1. Listening for user actions</h2>
+    <p>D3 selections forward DOM events through <code>selection.on</code>:</p>
+    <pre><code>svg.selectAll("circle")
+    .on("mouseover", (event, d) =&gt; {
+        console.log("hover on", d.country);
+    });</code></pre>
+    <p>The callback gets two arguments:</p>
+    <ul>
+        <li><code>event</code> — the native browser event (with <code>event.pageX</code>, <code>pageY</code>,
+            <code>currentTarget</code>, etc.)</li>
+        <li><code>d</code> — the datum bound to the element that fired the event</li>
+    </ul>
+    <p>This is how visual marks become interactive. The most common events:</p>
+    <ul>
+        <li><code>mouseover</code> · <code>mouseout</code> · <code>mousemove</code></li>
+        <li><code>click</code></li>
+        <li><code>input</code> · <code>change</code> (form controls)</li>
+        <li>keyboard events on the document or window</li>
+    </ul>
+
+    <h2>2. The event → state → render loop</h2>
+    <p>Most interactive D3 charts follow the same three-step loop:</p>
+    <ol>
+        <li><strong>Event</strong> — a user action fires (a hover, a click, a slider drag).</li>
+        <li><strong>State</strong> — the callback updates a small piece of state (a selected continent, a
+            current year).</li>
+        <li><strong>Render</strong> — a single render function reads the state and re-runs the data join.</li>
+    </ol>
+    <pre><code>let selectedContinent = null;       // state
+
+function render() {                  // render reads state
+    const visible = selectedContinent
+        ? data.filter(d =&gt; d.continent === selectedContinent)
+        : data;
+
+    svg.selectAll("circle")
+        .data(visible, d =&gt; d.country)
+        .join("circle")
+            .attr("cx", d =&gt; x(d.gdpPercap))
+            .attr("cy", d =&gt; y(d.lifeExp))
+            ...;
+}
+
+legend.on("click", (event, d) =&gt; {   // event updates state
+    selectedContinent = (selectedContinent === d) ? null : d;
+    render();
+});</code></pre>
+    <p>This split keeps event callbacks tiny — they only touch state. All drawing logic lives in one place,
+        which makes the chart easier to debug and extend.</p>
+
+    <h2>3. Hover tooltip — the simplest interaction</h2>
+    <p>The smallest useful interaction: a tooltip on hover. We use a single absolutely-positioned
+        <code>&lt;div&gt;</code> as a shared tooltip rather than appending one DOM element per row.</p>
+    <pre><code>const tip = d3.select("#tooltip");
+
+svg.selectAll("circle")
+    .on("mouseover", (event, d) =&gt; {
+        tip.style("opacity", 1)
+           .html(`&lt;b&gt;${d.country}&lt;/b&gt;&lt;br&gt;life exp: ${d.lifeExp.toFixed(1)} yr`);
+    })
+    .on("mousemove", (event) =&gt; {
+        tip.style("left", (event.pageX + 12) + "px")
+           .style("top",  (event.pageY + 12) + "px");
+    })
+    .on("mouseout", () =&gt; tip.style("opacity", 0));</code></pre>
+
+    <h2>4. Click to toggle — state lives in a variable</h2>
+    <p>Clicking a continent in the legend filters the chart to just that continent; clicking the same
+        continent again clears the filter. The legend item gets a visual highlight while it's the active
+        filter:</p>
+    <pre><code>let active = null;
+
+legendItems.on("click", (event, d) =&gt; {
+    active = (active === d) ? null : d;
+    render();              // re-render with the new filter
+    legendItems.attr("opacity", item =&gt; active &amp;&amp; item !== active ? 0.3 : 1);
+});</code></pre>
+
+    <h2>5. The year slider — scrubbing through time</h2>
+    <p>Gapminder spans 1952–2007. A range slider over the years lets the reader scrub through time;
+        every <code>input</code> event triggers a re-render with the new year's data:</p>
+    <pre><code>const yearSlider = d3.select("#year");
+
+yearSlider.on("input", function () {
+    currentYear = +this.value;
+    render();
+});</code></pre>
+
+    <h2>6. Capstone: Gapminder, interactive</h2>
+    <p>Everything from this tutorial — events, state, render loop — combined into one chart:</p>
+    <ul>
+        <li><strong>Hover</strong> a circle to see the country name and stats.</li>
+        <li><strong>Click</strong> a continent in the legend to filter (click again to clear).</li>
+        <li><strong>Drag</strong> the slider to change the year.</li>
+    </ul>
+    <p style="margin-top: 1em;">
+        <label style="display: inline-block; min-width: 8em;">Year: <span id="year-display">2007</span></label>
+        <input type="range" id="year" min="1952" max="2007" step="5" value="2007" style="width: 320px; vertical-align: middle;">
+    </p>
+    <div class="container" id="chart"></div>
+    <div id="tooltip"></div>
+
+    <h2>7. Built-in interaction helpers</h2>
+    <p>For richer behaviours D3 ships dedicated helpers — they handle the messy event details so your code
+        stays declarative:</p>
+    <ul>
+        <li><code>d3.brush</code> — drag a rectangular selection over the chart</li>
+        <li><code>d3.drag</code> — make individual marks draggable (force-directed graphs use this)</li>
+        <li><code>d3.zoom</code> — pan and zoom transforms on a chart</li>
+    </ul>
+    <p>Each follows the event-state-render pattern: the helper fires events, your callback updates state,
+        a render function redraws. Same shape, different inputs.</p>
+
+    <div class="note"><strong>Takeaway.</strong> The three concepts in L10 (paths and generators · the
+        update pattern · transitions) all converge in this capstone. Add a tiny event-state-render loop and
+        you have an interactive D3 chart. From here, every chart in the dv11/dv12 unit (force layouts,
+        chord diagrams, scrollytelling) is a richer composition of the same primitives.</div>
+
+    <p class="tutorial-nav"><a href="10d-transitions.html">← 10d — Transitions</a> ·
+        <a href="index.html">L10 index</a></p>
+
+    <script>
+        // ============================================================
+        // Capstone: Gapminder, interactive
+        // ============================================================
+        const continents = ["Africa", "Americas", "Asia", "Europe", "Oceania"];
+        const palette    = ["#009E73", "#D55E00", "#0072B2", "#CC79A7", "#E69F00"];
+        const colorOf    = d3.scaleOrdinal().domain(continents).range(palette);
+
+        const c = makeCanvas("#chart", 480, {
+            width: 800,
+            margin: { top: 30, right: 150, bottom: 56, left: 64 }
+        });
+        const tip = d3.select("#tooltip");
+        const yearDisplay = document.getElementById("year-display");
+
+        let allData = [];
+        let currentYear = 2007;
+        let activeContinent = null;
+
+        // scales — fixed across all years so the axes don't jump while scrubbing
+        const x = d3.scaleLog().range([0, c.innerW]);
+        const y = d3.scaleLinear().range([c.innerH, 0]);
+        const r = d3.scaleSqrt().range([3, 32]);
+
+        // axis groups — created once, updated on every render
+        const xAxisG = c.plot.append("g").attr("class", "axis")
+            .attr("transform", `translate(0, ${c.innerH})`);
+        const yAxisG = c.plot.append("g").attr("class", "axis");
+
+        c.plot.append("text")
+            .attr("x", c.innerW / 2).attr("y", c.innerH + 40).attr("text-anchor", "middle")
+            .style("font-size", "var(--text-md)").attr("fill", "#555")
+            .text("GDP per capita (log scale, USD)");
+        c.plot.append("text")
+            .attr("transform", `translate(-44, ${c.innerH / 2}) rotate(-90)`)
+            .attr("text-anchor", "middle")
+            .style("font-size", "var(--text-md)").attr("fill", "#555")
+            .text("Life expectancy (years)");
+
+        // legend — built once, click toggles activeContinent
+        const legend = c.plot.append("g").attr("transform", `translate(${c.innerW + 20}, 10)`);
+        legend.append("text")
+            .attr("y", -6).style("font-weight", "bold").style("font-size", "var(--text-md)")
+            .text("Continent");
+
+        const legendItems = legend.selectAll("g.item").data(continents).join("g")
+            .attr("class", "item")
+            .attr("transform", (d, i) => `translate(0, ${i * 22 + 10})`)
+            .style("cursor", "pointer")
+            .on("click", (event, d) => {
+                activeContinent = (activeContinent === d) ? null : d;
+                legendItems.attr("opacity", item =>
+                    activeContinent && item !== activeContinent ? 0.3 : 1);
+                render();
+            });
+        legendItems.append("circle").attr("r", 8).attr("fill", d => colorOf(d)).attr("opacity", 0.85);
+        legendItems.append("text").attr("x", 16).attr("y", 4).style("font-size", "var(--text-md)").text(d => d);
+
+        legend.append("text")
+            .attr("y", continents.length * 22 + 30)
+            .style("font-size", "11px").attr("fill", "#888")
+            .text("(click to filter)");
+
+        d3.csv("./datasets/gapminder.csv", d => ({
+            country: d.country, continent: d.continent,
+            year: +d.year, lifeExp: +d.lifeExp,
+            pop: +d.pop, gdpPercap: +d.gdpPercap
+        })).then(rows => {
+            allData = rows;
+            // freeze scale domains across all years using the full dataset
+            x.domain(d3.extent(allData, d => d.gdpPercap)).nice();
+            y.domain(d3.extent(allData, d => d.lifeExp)).nice();
+            r.domain(d3.extent(allData, d => d.pop));
+            xAxisG.call(d3.axisBottom(x).ticks(6, "~s"));
+            yAxisG.call(d3.axisLeft(y));
+            render();
+        });
+
+        function render() {
+            const yearData = allData.filter(d => d.year === currentYear);
+            const visible = activeContinent
+                ? yearData.filter(d => d.continent === activeContinent)
+                : yearData;
+
+            c.plot.selectAll("circle.country")
+                .data(visible, d => d.country)
+                .join(
+                    enter => enter.append("circle")
+                        .attr("class", "country")
+                        .attr("cx", d => x(d.gdpPercap))
+                        .attr("cy", d => y(d.lifeExp))
+                        .attr("r", 0)
+                        .attr("fill", d => colorOf(d.continent))
+                        .attr("opacity", 0.7).attr("stroke", "white")
+                        .style("cursor", "pointer")
+                        .on("mouseover", (event, d) => {
+                            d3.select(event.currentTarget).attr("stroke", "#1a1a1a").attr("stroke-width", 2);
+                            tip.style("opacity", 1)
+                               .html(`<b>${d.country}</b><br>` +
+                                     `${d.continent} · ${d.year}<br>` +
+                                     `life exp: ${d.lifeExp.toFixed(1)} yr<br>` +
+                                     `pop: ${d3.format(",")(d.pop)}<br>` +
+                                     `GDP pc: ${d3.format("$,.0f")(d.gdpPercap)}`);
+                        })
+                        .on("mousemove", event => {
+                            tip.style("left", (event.pageX + 14) + "px")
+                               .style("top",  (event.pageY + 14) + "px");
+                        })
+                        .on("mouseout", event => {
+                            d3.select(event.currentTarget).attr("stroke", "white").attr("stroke-width", 1);
+                            tip.style("opacity", 0);
+                        })
+                        .call(en => en.transition().duration(400).attr("r", d => r(d.pop))),
+                    update => update.transition().duration(400)
+                        .attr("cx", d => x(d.gdpPercap))
+                        .attr("cy", d => y(d.lifeExp))
+                        .attr("r",  d => r(d.pop)),
+                    exit => exit.transition().duration(300).attr("r", 0).remove()
+                );
+        }
+
+        d3.select("#year").on("input", function () {
+            currentYear = +this.value;
+            yearDisplay.textContent = currentYear;
+            render();
+        });
+    </script>
+</body>
+
+</html>

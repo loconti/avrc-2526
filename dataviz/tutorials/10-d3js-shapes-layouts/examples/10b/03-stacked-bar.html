@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>10b — stacked bar chart</title>
+    <style>
+        body { margin: 1em; font-family: -apple-system, BlinkMacSystemFont,
+                                          "Segoe UI", Roboto, sans-serif; }
+        svg  { border: 1px solid #ddd; background: white; }
+        .axis text { font-size: 13px; fill: #555; }
+        .axis path, .axis line { stroke: #bbb; }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div id="demo"></div>
+    <script>
+        const CANVAS = {
+            width:  700,
+            margin: { top: 24, right: 30, bottom: 36, left: 50 }
+        };
+        function makeCanvas(selector, height, opts = {}) {
+            const m = { ...CANVAS.margin, ...(opts.margin || {}) };
+            const w = opts.width ?? CANVAS.width;
+            const innerW = w - m.left - m.right;
+            const innerH = height - m.top - m.bottom;
+            const root = d3.select(selector).append("svg")
+                .attr("width", w).attr("height", height)
+                .style("background", "#fafafa").style("border", "1px solid #ddd");
+            const plot = root.append("g")
+                .attr("transform", `translate(${m.left}, ${m.top})`);
+            return { root, plot, innerW, innerH, margin: m, width: w, height };
+        }
+        const c = makeCanvas("#demo", 380, { margin: { top: 30, bottom: 50 } });
+        const data = [
+            { year: 2018, apples: 10, bananas: 20, cherries: 5 },
+            { year: 2019, apples: 12, bananas: 18, cherries: 8 },
+            { year: 2020, apples: 15, bananas: 22, cherries: 6 },
+            { year: 2021, apples: 17, bananas: 24, cherries: 10 },
+            { year: 2022, apples: 14, bananas: 21, cherries: 12 }
+        ];
+        const keys = ["apples", "bananas", "cherries"];
+        const stack = d3.stack().keys(keys);
+        const series = stack(data);
+
+        const x = d3.scaleBand().domain(data.map(d => d.year))
+            .range([0, c.innerW]).padding(0.15);
+        const yMax = d3.max(series, layer => d3.max(layer, d => d[1]));
+        const y = d3.scaleLinear().domain([0, yMax]).nice().range([c.innerH, 0]);
+        const color = d3.scaleOrdinal().domain(keys)
+            .range(["#D55E00", "#E69F00", "#7F3C8D"]);
+
+        c.plot.append("g").attr("class", "axis")
+            .attr("transform", `translate(0, ${c.innerH})`)
+            .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+        c.plot.append("g").attr("class", "axis").call(d3.axisLeft(y));
+
+        c.plot.selectAll("g.layer").data(series).join("g")
+            .attr("class", "layer").attr("fill", d => color(d.key))
+            .selectAll("rect").data(d => d).join("rect")
+            .attr("x", d => x(d.data.year)).attr("y", d => y(d[1]))
+            .attr("height", d => y(d[0]) - y(d[1])).attr("width", x.bandwidth())
+            .attr("opacity", 0.9);
+
+        const legend = c.plot.append("g").attr("transform", `translate(${c.innerW - 110}, 8)`);
+        keys.forEach((k, i) => {
+            const item = legend.append("g").attr("transform", `translate(0, ${i * 18})`);
+            item.append("rect").attr("width", 12).attr("height", 12).attr("fill", color(k));
+            item.append("text").attr("x", 18).attr("y", 10)
+                .style("font-size", "12px").attr("fill", "#333").text(k);
+        });
+    </script>
+</body>
+</html>

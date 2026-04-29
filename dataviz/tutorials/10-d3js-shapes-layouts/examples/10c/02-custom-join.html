@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>10c — custom join behavior</title>
+    <style>
+        body { margin: 1em; font-family: -apple-system, BlinkMacSystemFont,
+                                          "Segoe UI", Roboto, sans-serif; }
+        svg  { border: 1px solid #ddd; background: white; }
+        .axis text { font-size: 13px; fill: #555; }
+        .axis path, .axis line { stroke: #bbb; }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <p><button id="cycle-btn">Cycle dataset (1..5 ↔ 3..10)</button></p>
+    <div id="demo"></div>
+    <script>
+        const CANVAS = {
+            width:  700,
+            margin: { top: 24, right: 30, bottom: 36, left: 50 }
+        };
+        function makeCanvas(selector, height, opts = {}) {
+            const m = { ...CANVAS.margin, ...(opts.margin || {}) };
+            const w = opts.width ?? CANVAS.width;
+            const innerW = w - m.left - m.right;
+            const innerH = height - m.top - m.bottom;
+            const root = d3.select(selector).append("svg")
+                .attr("width", w).attr("height", height)
+                .style("background", "#fafafa").style("border", "1px solid #ddd");
+            const plot = root.append("g")
+                .attr("transform", `translate(${m.left}, ${m.top})`);
+            return { root, plot, innerW, innerH, margin: m, width: w, height };
+        }
+        const c = makeCanvas("#demo", 200, { margin: { top: 30, bottom: 30 } });
+        const allIds = d3.range(1, 11);
+        let visibleSet = new Set([1, 2, 3, 4, 5]);
+
+        function render() {
+            const data = allIds.filter(id => visibleSet.has(id)).map(id => ({ id }));
+            const slotW = c.innerW / 10;
+            const yC = c.innerH / 2;
+            c.plot.selectAll("circle")
+                .data(data, d => d.id)
+                .join(
+                    enter => enter.append("circle")
+                        .attr("cx", d => slotW * (d.id - 0.5)).attr("cy", yC)
+                        .attr("r", 0)
+                        .attr("fill", "#009E73").attr("opacity", 0.85)
+                        .call(en => en.transition().duration(400).attr("r", 18)),
+                    update => update.attr("fill", "#0072B2"),
+                    exit => exit.attr("fill", "#D55E00")
+                        .call(ex => ex.transition().duration(300).attr("r", 0).remove())
+                );
+            c.plot.selectAll("text.id")
+                .data(data, d => d.id)
+                .join(
+                    enter => enter.append("text").attr("class", "id")
+                        .attr("x", d => slotW * (d.id - 0.5)).attr("y", yC + 4)
+                        .attr("text-anchor", "middle")
+                        .style("font-size", "12px").style("font-weight", "bold")
+                        .attr("fill", "white").attr("opacity", 0)
+                        .text(d => d.id)
+                        .call(en => en.transition().duration(400).attr("opacity", 1)),
+                    update => update,
+                    exit => exit.transition().duration(300).attr("opacity", 0).remove()
+                );
+        }
+        render();
+        document.getElementById("cycle-btn").addEventListener("click", () => {
+            visibleSet = visibleSet.has(1)
+                ? new Set([3, 4, 5, 6, 7, 8, 9, 10])
+                : new Set([1, 2, 3, 4, 5]);
+            render();
+        });
+    </script>
+</body>
+</html>
