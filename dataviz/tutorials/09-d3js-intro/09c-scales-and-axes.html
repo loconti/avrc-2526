@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>09c — Scales and Axes</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="./_shared/chart.js"></script>
+    <link rel="stylesheet" href="./_shared/chart.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/styles/github.min.css">
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/highlight.min.js"></script>
+    <script>document.addEventListener("DOMContentLoaded", () => hljs.highlightAll());</script>
+  </head>
+
+<body>
+    <h1>09c — Scales and Axes</h1>
+    <p class="lead"><strong>Scales</strong> turn raw data values into visual values (pixel positions, radii,
+        colors). <strong>Axes</strong> are the visible record of that mapping. Together they are the most
+        important concept in D3 after the data join — every chart depends on getting them right.</p>
+
+    <h2>1. Why we need scales at all</h2>
+    <p>Suppose we have nine data points with values from 0 to 50 000:</p>
+    <pre><code>const data = [120, 480, 2400, 5500, 9800, 17000, 24000, 38000, 49500];</code></pre>
+    <p>If we map them <em>directly</em> to pixel positions, most fall off the right of the plot area:</p>
+    <div class="container" id="demo-broken"></div>
+    <p>A scale fixes this. It is a function that compresses the data range into the pixel range:</p>
+    <pre><code>const x = d3.scaleLinear()
+    .domain([0, 50000])    // input: data values
+    .range ([0, innerW]);  // output: pixel positions
+
+x(0);       // → 0
+x(25000);   // → innerW / 2
+x(50000);   // → innerW</code></pre>
+    <div class="container" id="demo-fixed"></div>
+
+    <h2>2. <code>scaleLinear</code>, interactively</h2>
+    <p>A linear scale is a straight-line interpolation between domain and range. Move the sliders to change the
+        domain endpoints; the same nine data points are remapped on the fly:</p>
+    <p>
+        <label>domain min: <input type="range" id="dom-min" min="-2000" max="20000" value="0"></label>
+        <label>domain max: <input type="range" id="dom-max" min="20000" max="60000" value="50000"></label>
+    </p>
+    <div class="container" id="demo-1d"></div>
+    <p><code id="formula"></code></p>
+    <p>Two helpers worth knowing:</p>
+    <ul>
+        <li><code>.nice()</code> — round the domain to friendlier numbers
+            (<code>[0, 50 000]</code> instead of <code>[120, 49 500]</code>). Compare:</li>
+    </ul>
+    <div class="container" id="demo-nice-raw"></div>
+    <div class="container" id="demo-nice"></div>
+    <ul>
+        <li><code>.clamp(true)</code> — values outside the domain are clamped to the range, instead of
+            extrapolated.</li>
+    </ul>
+
+    <h2>3. Configuring an axis</h2>
+    <p>An axis is a generator: pass it a scale and it draws ticks, tick labels, and the axis line. The same
+        scale renders four different ways below — only the axis configuration changes:</p>
+    <pre><code>// (1) default
+d3.axisBottom(x)
+
+// (2) custom number of ticks
+d3.axisBottom(x).ticks(4)
+
+// (3) explicit tick values
+d3.axisBottom(x).tickValues([0, 12500, 25000, 37500, 50000])
+
+// (4) custom tick formatting (SI prefixes — 10k, 20k, …)
+d3.axisBottom(x).tickFormat(d3.format("~s"))</code></pre>
+    <div class="container" id="demo-axis-1"></div>
+    <div class="container" id="demo-axis-2"></div>
+    <div class="container" id="demo-axis-3"></div>
+    <div class="container" id="demo-axis-4"></div>
+    <p>Other axis variants: <code>d3.axisTop</code> (ticks above the line), <code>d3.axisRight</code> (ticks on
+        the right). All four work the same way.</p>
+
+    <h2>4. The margin convention</h2>
+    <p>The reason every chart in this tutorial uses the same skeleton: an axis lives <em>at the edge</em> of the
+        plot area. If the plot area starts at the SVG edge, the axis line and tick labels get clipped. The
+        margin convention pads the SVG and puts the marks inside an inner <code>&lt;g&gt;</code> shifted by the
+        margins.</p>
+    <pre><code>const width  = 700, height = 200;
+const margin = { top: 24, right: 30, bottom: 36, left: 50 };
+const innerW = width  - margin.left - margin.right;   // 620
+const innerH = height - margin.top  - margin.bottom;  // 140
+
+const svg = d3.select("#chart")
+    .append("svg")
+        .attr("width",  width)
+        .attr("height", height)
+    .append("g")
+        .attr("transform", `translate(${margin.left}, ${margin.top})`);</code></pre>
+    <p>Below, the same axis rendered two ways:</p>
+    <p style="font-weight: 600; color: #D55E00; margin-bottom: 0.3em;">
+        Without margins — axis line sits at the SVG top edge; tick labels rendered above it
+        (<code>y &lt; 0</code>) are clipped and disappear.
+    </p>
+    <div class="container" id="demo-no-margin"></div>
+    <p style="font-weight: 600; color: #009E73; margin-top: 1.2em; margin-bottom: 0.3em;">
+        With margins — the inner <code>&lt;g&gt;</code> is shifted by the margins, so axis labels
+        have room and stay readable.
+    </p>
+    <div class="container" id="demo-with-margin"></div>
+
+    <h2>5. Two scales make a 2D plot</h2>
+    <p>A 2D chart needs one scale per axis. Both can be linear, but the y-scale's <strong>range is
+            inverted</strong>: <code>[innerH, 0]</code> instead of <code>[0, innerH]</code>, so larger data
+        values appear higher on the screen.</p>
+    <pre><code>const y = d3.scaleLinear()
+    .domain([0, 100])
+    .range ([innerH, 0]);    // ← inverted on purpose</code></pre>
+    <p>Same nine points, y-range NOT inverted (top) vs. y-range inverted (bottom). Read the y-axis carefully —
+        the values are flipped:</p>
+    <div class="container" id="demo-2d-not-inverted"></div>
+    <div class="container" id="demo-2d-inverted"></div>
+
+    <h2>6. When linear is wrong: <code>scaleLog</code> and <code>scaleSqrt</code></h2>
+    <p>A linear scale gives every numeric step the same pixel space. That is not always what you want:</p>
+    <ul>
+        <li><strong>Values spanning orders of magnitude</strong>: a linear axis crushes the small values into a
+            thin strip. Use <code>scaleLog</code>.</li>
+        <li><strong>A radius that should encode <em>area</em></strong>: the human eye reads circle area, not
+            radius. Use <code>scaleSqrt</code> so that <code>area = π r² ∝ value</code>.</li>
+    </ul>
+    <p>Same data on a linear axis (top) vs. a log axis (bottom):</p>
+    <pre><code>const data = [10, 30, 100, 300, 1000, 3000, 10000, 30000];
+
+const xLin = d3.scaleLinear().domain(d3.extent(data)).range([0, innerW]);
+const xLog = d3.scaleLog()   .domain(d3.extent(data)).range([0, innerW]);</code></pre>
+    <div class="container" id="demo-log-linear"></div>
+    <div class="container" id="demo-log-log"></div>
+    <p>Same data with <code>r = scaleLinear</code> (top) vs. <code>r = scaleSqrt</code> (bottom):</p>
+    <pre><code>const values = [1, 4, 9, 16, 25, 36, 49];
+
+// radius proportional to value → area grows quadratically (visually exaggerated)
+const rLin  = d3.scaleLinear().domain([0, d3.max(values)]).range([0, 40]);
+
+// radius proportional to √value → area is proportional to value (correct)
+const rSqrt = d3.scaleSqrt()  .domain([0, d3.max(values)]).range([0, 40]);</code></pre>
+    <div class="container" id="demo-r-linear"></div>
+    <div class="container" id="demo-r-sqrt"></div>
+
+    <h2>7. Categorical scales: <code>scaleBand</code> and <code>scaleOrdinal</code></h2>
+    <p>Continuous scales handle numbers. For categories we need a different mapping:</p>
+    <ul>
+        <li><code>scaleBand</code> — discrete categories → equal-width slots. Used for bar-chart x-axes; provides
+            <code>.bandwidth()</code> for the slot width.</li>
+        <li><code>scaleOrdinal</code> — discrete categories → discrete values (typically colors).</li>
+    </ul>
+    <pre><code>const xBand = d3.scaleBand()
+    .domain(["Mon","Tue","Wed","Thu","Fri","Sat","Sun"])
+    .range ([0, innerW])
+    .padding(0.15);
+
+xBand("Wed");          // → left edge of the "Wed" slot
+xBand.bandwidth();     // → slot width minus padding
+
+const color = d3.scaleOrdinal()
+    .domain(["A", "B", "C"])
+    .range (["#0072B2", "#E69F00", "#009E73"]);
+
+color("B");            // → "#E69F00"</code></pre>
+    <p>The same nine-point dataset rendered three ways. The radio buttons swap the x-scale; the y-scale stays
+        linear:</p>
+    <p>
+        <label><input type="radio" name="scaleType" value="linear" checked> linear (scatter)</label>
+        <label><input type="radio" name="scaleType" value="log"> log (scatter)</label>
+        <label><input type="radio" name="scaleType" value="band"> band (bar chart)</label>
+    </p>
+    <div class="container" id="demo-toggle"></div>
+
+    <h2>8. Quick reference</h2>
+    <table>
+        <thead><tr><th>Scale</th><th>Domain → Range</th><th>Use it for</th></tr></thead>
+        <tbody>
+            <tr><td><code>scaleLinear</code></td><td>continuous → continuous</td><td>most positions, lengths,
+                opacities</td></tr>
+            <tr><td><code>scaleLog</code></td><td>continuous (positive) → continuous</td><td>values spanning
+                orders of magnitude</td></tr>
+            <tr><td><code>scaleSqrt</code></td><td>continuous → continuous</td><td>radius for area-proportional
+                marks</td></tr>
+            <tr><td><code>scalePow</code></td><td>continuous → continuous</td><td>arbitrary exponents (rare)</td></tr>
+            <tr><td><code>scaleTime</code></td><td>dates → continuous</td><td>time axes</td></tr>
+            <tr><td><code>scaleBand</code></td><td>discrete → continuous slots</td><td>bar-chart x-axis</td></tr>
+            <tr><td><code>scalePoint</code></td><td>discrete → discrete pixel positions</td><td>centered
+                categorical marks</td></tr>
+            <tr><td><code>scaleOrdinal</code></td><td>discrete → discrete</td><td>category → color or shape</td></tr>
+            <tr><td><code>scaleSequential</code></td><td>continuous → color</td><td>continuous color encodings</td></tr>
+            <tr><td><code>scaleDiverging</code></td><td>continuous → color</td><td>diverging continuous color</td></tr>
+        </tbody>
+    </table>
+
+    <div class="note"><strong>Takeaway.</strong> One scale per visual channel; pick the type from the shape of
+        the data, not from the chart you want. The margin convention plus an axis generator per scale completes
+        the chart skeleton. The toy datasets so far were hand-typed; <code>09d</code> introduces
+        <code>d3.csv</code>, the accessor pattern, and the helpers
+        (<code>extent</code> · <code>group</code> · <code>rollup</code> · <code>format</code>) needed to feed
+        real data into these scales.</div>
+
+    <p class="tutorial-nav"><a href="09b-data-driven-svg.html">← 09b — Data-Driven SVG</a> ·
+        <a href="index.html">L9 index</a> ·
+        <a href="09d-loading-data.html">09d — Loading Data →</a></p>
+
+    <script>
+        function caption(plot, text, color = "#666") {
+            return plot.append("text")
+                .attr("x", 0).attr("y", -8)
+                .style("font-size", "var(--text-md)").style("fill", color)
+                .text(text);
+        }
+
+        // ============================================================
+        // 1. Why we need scales — broken vs fixed
+        // ============================================================
+        const data1D = [120, 480, 2400, 5500, 9800, 17000, 24000, 38000, 49500];
+
+        // 1a. broken: cx = d, no scale
+        {
+            const c = makeCanvas("#demo-broken", 90);
+            caption(c.plot, "cx = d  (broken — most points fall outside the plot area)", "#D55E00");
+            c.plot.selectAll("circle").data(data1D).join("circle")
+                .attr("cx", d => d).attr("cy", c.innerH / 2).attr("r", 6)
+                .attr("fill", "#D55E00").attr("opacity", 0.75);
+        }
+
+        // 1b. fixed: cx = x(d) with a linear scale
+        {
+            const c = makeCanvas("#demo-fixed", 110);
+            caption(c.plot, "cx = x(d)  with  scaleLinear().domain([0, 50000]).range([0, innerW])", "#009E73");
+            const x = d3.scaleLinear().domain([0, 50000]).range([0, c.innerW]);
+            c.plot.append("g")
+                .attr("transform", `translate(0, ${c.innerH})`)
+                .call(d3.axisBottom(x).ticks(6, "~s"));
+            c.plot.selectAll("circle").data(data1D).join("circle")
+                .attr("cx", d => x(d)).attr("cy", c.innerH / 2).attr("r", 6)
+                .attr("fill", "#0072B2").attr("opacity", 0.75);
+        }
+
+        // ============================================================
+        // 2. Interactive 1D linear scale
+        // ============================================================
+        const c1d = makeCanvas("#demo-1d", 130);
+        const axis1d = c1d.plot.append("g")
+            .attr("transform", `translate(0, ${c1d.innerH})`);
+        const dots1d = c1d.plot.append("g");
+
+        function render1D() {
+            const dMin = +document.getElementById("dom-min").value;
+            const dMax = +document.getElementById("dom-max").value;
+            const x = d3.scaleLinear().domain([dMin, dMax]).range([0, c1d.innerW]);
+            axis1d.call(d3.axisBottom(x).ticks(8, "~s"));
+            dots1d.selectAll("circle").data(data1D).join("circle")
+                .attr("cy", c1d.innerH / 2).attr("r", 6)
+                .attr("fill", "#0072B2").attr("opacity", 0.75)
+                .transition().duration(250)
+                .attr("cx", d => x(d));
+            document.getElementById("formula").textContent =
+                `pixel = (data − ${dMin}) / (${dMax} − ${dMin}) × ${c1d.innerW}`;
+        }
+        ["dom-min", "dom-max"].forEach(id =>
+            document.getElementById(id).addEventListener("input", render1D));
+        render1D();
+
+        // ------------------- .nice() comparison -------------------
+        const niceData = [123, 487, 1742, 9800, 24371, 49217];
+        {
+            const c = makeCanvas("#demo-nice-raw", 90);
+            caption(c.plot, "without .nice()  — domain follows the raw data extent", "#D55E00");
+            const x = d3.scaleLinear().domain(d3.extent(niceData)).range([0, c.innerW]);
+            c.plot.append("g")
+                .attr("transform", `translate(0, ${c.innerH})`)
+                .call(d3.axisBottom(x).ticks(6));
+        }
+        {
+            const c = makeCanvas("#demo-nice", 90);
+            caption(c.plot, "with .nice()  — domain rounded to friendly numbers", "#009E73");
+            const x = d3.scaleLinear().domain(d3.extent(niceData)).nice().range([0, c.innerW]);
+            c.plot.append("g")
+                .attr("transform", `translate(0, ${c.innerH})`)
+                .call(d3.axisBottom(x).ticks(6));
+        }
+
+        // ============================================================
+        // 3. Axis configuration — same scale, four configurations
+        // ============================================================
+        const axisVariants = [
+            { id: "demo-axis-1", label: "(1)  d3.axisBottom(x)",                                        cfg: a => a },
+            { id: "demo-axis-2", label: "(2)  d3.axisBottom(x).ticks(4)",                               cfg: a => a.ticks(4) },
+            { id: "demo-axis-3", label: "(3)  d3.axisBottom(x).tickValues([0, 12500, 25000, 37500, 50000])",
+                cfg: a => a.tickValues([0, 12500, 25000, 37500, 50000]) },
+            { id: "demo-axis-4", label: '(4)  d3.axisBottom(x).tickFormat(d3.format("~s"))',           cfg: a => a.tickFormat(d3.format("~s")) }
+        ];
+        axisVariants.forEach(v => {
+            const c = makeCanvas("#" + v.id, 90);
+            caption(c.plot, v.label);
+            const x = d3.scaleLinear().domain([0, 50000]).range([0, c.innerW]);
+            c.plot.append("g")
+                .attr("transform", `translate(0, ${c.innerH})`)
+                .call(v.cfg(d3.axisBottom(x)));
+        });
+
+        // ============================================================
+        // 4. Margin convention — without vs with
+        // 4a. NO margins: axis line is at the SVG top edge (y=0). axisTop renders
+        //     tick labels above the line — at y < 0, which is outside the SVG —
+        //     so the labels get clipped away. The student sees axis ticks but
+        //     no numbers.
+        {
+            const root = d3.select("#demo-no-margin").append("svg")
+                .attr("width", CANVAS.width).attr("height", 30)
+                .style("background", "#fafafa").style("border", "1px solid #ddd");
+            const x = d3.scaleLinear().domain([0, 50000]).range([0, CANVAS.width]);
+            root.append("g").attr("transform", "translate(0, 0)")
+                .call(d3.axisTop(x).ticks(6, "~s"));
+        }
+        // 4b. With margins: same axis, well-padded via makeCanvas.
+        {
+            const c = makeCanvas("#demo-with-margin", 80);
+            const x = d3.scaleLinear().domain([0, 50000]).range([0, c.innerW]);
+            c.plot.append("g")
+                .attr("transform", `translate(0, ${c.innerH})`)
+                .call(d3.axisBottom(x).ticks(6, "~s"));
+        }
+
+        // ============================================================
+        // 5. Two scales — y range inverted vs not
+        // ============================================================
+        const data2D = [
+            { x: 1, y: 8 }, { x: 2, y: 3 }, { x: 3, y: 5 }, { x: 4, y: 11 },
+            { x: 5, y: 6 }, { x: 6, y: 9 }, { x: 7, y: 4 }, { x: 8, y: 13 }, { x: 9, y: 7 }
+        ];
+        function render2D(selector, label, yInverted) {
+            const c = makeCanvas(selector, 240);
+            caption(c.plot, label, yInverted ? "#009E73" : "#D55E00");
+            const x = d3.scaleLinear().domain([0, 10]).range([0, c.innerW]);
+            const y = d3.scaleLinear().domain([0, 14])
+                .range(yInverted ? [c.innerH, 0] : [0, c.innerH]);
+            c.plot.append("g")
+                .attr("transform", `translate(0, ${c.innerH})`)
+                .call(d3.axisBottom(x).ticks(5));
+            c.plot.append("g").call(d3.axisLeft(y).ticks(5));
+            c.plot.selectAll("circle").data(data2D).join("circle")
+                .attr("cx", d => x(d.x)).attr("cy", d => y(d.y))
+                .attr("r", 5).attr("fill", "#0072B2").attr("opacity", 0.85);
+        }
+        render2D("#demo-2d-not-inverted", "y-range = [0, innerH]  (NOT inverted — large values at the bottom)", false);
+        render2D("#demo-2d-inverted",     "y-range = [innerH, 0]  (inverted — large values at the top)", true);
+
+        // ============================================================
+        // 6a. Linear vs log on the same data
+        // ============================================================
+        const dataLog = [10, 30, 100, 300, 1000, 3000, 10000, 30000];
+        function renderAxisRow(selector, scale, label, color) {
+            const c = makeCanvas(selector, 110);
+            caption(c.plot, label, color);
+            c.plot.append("g")
+                .attr("transform", `translate(0, ${c.innerH})`)
+                .call(d3.axisBottom(scale).ticks(6, "~s"));
+            c.plot.selectAll("circle").data(dataLog).join("circle")
+                .attr("cx", d => scale(d))
+                .attr("cy", c.innerH / 2)
+                .attr("r", 6).attr("fill", color === "#D55E00" ? "#D55E00" : "#0072B2")
+                .attr("opacity", 0.85);
+        }
+        // We need innerW from a probe canvas; recompute it here from CANVAS.
+        const probeInnerW = CANVAS.width - CANVAS.margin.left - CANVAS.margin.right;
+        renderAxisRow(
+            "#demo-log-linear",
+            d3.scaleLinear().domain(d3.extent(dataLog)).range([0, probeInnerW]),
+            "scaleLinear  — small values bunch up at the left",
+            "#D55E00");
+        renderAxisRow(
+            "#demo-log-log",
+            d3.scaleLog().domain(d3.extent(dataLog)).range([0, probeInnerW]),
+            "scaleLog  — each tick is one order of magnitude, points evenly spaced",
+            "#0072B2");
+
+        // ============================================================
+        // 6b. Linear-radius vs sqrt-radius
+        // ============================================================
+        const dataR = [1, 4, 9, 16, 25, 36, 49];
+        function renderRadiusRow(selector, rScale, label, color) {
+            const c = makeCanvas(selector, 130);
+            caption(c.plot, label, color);
+            // arrange the seven circles evenly across innerW.
+            const cellW = c.innerW / dataR.length;
+            // The maximum radius produced by either scale is 40, so place the
+            // row a bit higher than centre to leave room below for the largest
+            // circle without colliding with the bottom of the plot area.
+            const cy = Math.max(c.innerH / 2, 50);
+            dataR.forEach((d, i) => {
+                c.plot.append("circle")
+                    .attr("cx", cellW * (i + 0.5))
+                    .attr("cy", cy)
+                    .attr("r", rScale(d))
+                    .attr("fill", color).attr("opacity", 0.7);
+            });
+        }
+        // Radius range capped at 40 so even the largest circle stays inside the
+        // row. innerW / 7 ≈ 88, so radius up to ~40 keeps circles non-overlapping.
+        const rMax = 40;
+        renderRadiusRow(
+            "#demo-r-linear",
+            d3.scaleLinear().domain([0, d3.max(dataR)]).range([0, rMax]),
+            "r = scaleLinear(value)  — radius proportional to value, area grows quadratically",
+            "#D55E00");
+        renderRadiusRow(
+            "#demo-r-sqrt",
+            d3.scaleSqrt().domain([0, d3.max(dataR)]).range([0, rMax]),
+            "r = scaleSqrt(value)  — area proportional to value (the perceptually correct choice)",
+            "#0072B2");
+
+        // ============================================================
+        // 7. Categorical scales — band / ordinal toggle
+        // ============================================================
+        const datasetT = [
+            { x: 10, y: 20 }, { x: 20, y: 35 }, { x: 30, y: 15 },
+            { x: 40, y: 25 }, { x: 50, y: 45 }, { x: 60, y: 30 },
+            { x: 70, y: 40 }, { x: 80, y: 10 }, { x: 90, y: 50 }
+        ];
+        const PALETTE_9 = [
+            "#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7",
+            "#56B4E9", "#B8860B", "#7F3C8D", "#11A579"
+        ];
+        const colorPos = d3.scaleOrdinal()
+            .domain(d3.range(datasetT.length))
+            .range(PALETTE_9);
+
+        function renderToggle(type) {
+            d3.select("#demo-toggle").html("");
+            const c = makeCanvas("#demo-toggle", 360);
+
+            let x;
+            if (type === "band") {
+                x = d3.scaleBand().domain(datasetT.map(d => d.x))
+                    .range([0, c.innerW]).padding(0.2);
+            } else if (type === "log") {
+                x = d3.scaleLog().domain(d3.extent(datasetT, d => d.x))
+                    .range([0, c.innerW]);
+            } else {
+                x = d3.scaleLinear().domain([0, d3.max(datasetT, d => d.x)]).nice()
+                    .range([0, c.innerW]);
+            }
+            const y = d3.scaleLinear()
+                .domain([0, d3.max(datasetT, d => d.y)]).nice()
+                .range([c.innerH, 0]);
+
+            c.plot.append("g")
+                .attr("transform", `translate(0, ${c.innerH})`)
+                .call(d3.axisBottom(x));
+            c.plot.append("g").call(d3.axisLeft(y));
+
+            if (type === "band") {
+                c.plot.selectAll("rect.bar").data(datasetT).join("rect")
+                    .attr("class", "bar")
+                    .attr("x", d => x(d.x)).attr("y", d => y(d.y))
+                    .attr("width", x.bandwidth())
+                    .attr("height", d => c.innerH - y(d.y))
+                    .attr("fill", (d, i) => colorPos(i)).attr("opacity", 0.8);
+            } else {
+                c.plot.selectAll("circle").data(datasetT).join("circle")
+                    .attr("cx", d => x(d.x)).attr("cy", d => y(d.y))
+                    .attr("r", 7)
+                    .attr("fill", (d, i) => colorPos(i)).attr("opacity", 0.85);
+            }
+        }
+        renderToggle("linear");
+        document.querySelectorAll('input[name="scaleType"]').forEach(r =>
+            r.addEventListener("change", e => renderToggle(e.target.value)));
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>09d — Loading Data and D3 Helpers</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" href="./_shared/chart.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/styles/github.min.css">
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/highlight.min.js"></script>
+    <script>document.addEventListener("DOMContentLoaded", () => hljs.highlightAll());</script>
+  </head>
+
+<body>
+    <h1>09d — Loading Data and D3 Helpers</h1>
+    <p class="lead">Bringing real data into a D3 page: how <code>d3.csv</code> parses a file, why an accessor is
+        usually needed, and the helpers D3 ships for summarising and formatting data
+        (<code>d3.extent</code>, <code>d3.group</code>, <code>d3.rollup</code>, <code>d3.format</code>) before
+        plotting.</p>
+
+    <h2>1. Loading a CSV</h2>
+    <p>The simplest call:</p>
+    <pre><code>const raw = await d3.csv("./datasets/gapminder.csv");
+console.log(raw[0]);</code></pre>
+    <p>The result is an array of plain objects, one per row. The output of the first row is shown below.</p>
+    <p>The catch: every value is a <strong>string</strong>, even numeric columns. This silently breaks scales,
+        comparisons, and arithmetic.</p>
+    <pre id="raw-row-output">loading…</pre>
+    <p id="raw-types"></p>
+
+    <h2>2. The accessor pattern</h2>
+    <p><code>d3.csv</code> accepts an optional second argument: a function called for each row. Returning a freshly
+        built object is the right place to coerce types:</p>
+    <pre><code>const data = await d3.csv("./datasets/gapminder.csv", d => ({
+    country:    d.country,
+    continent:  d.continent,
+    year:      +d.year,        // unary + coerces to a number
+    lifeExp:   +d.lifeExp,
+    pop:       +d.pop,
+    gdpPercap: +d.gdpPercap
+}));</code></pre>
+    <p>The unary <code>+</code> turns the string into a number. Without it, a comparison like
+        <code>d.year &lt; 2000</code> compares strings lexicographically — true for <code>"1952"</code> and false
+        for <code>"2007"</code> for the wrong reason. After coercion, the same row looks like:</p>
+    <pre id="parsed-row-output">loading…</pre>
+    <p id="parsed-types"></p>
+
+    <h2>3. Summary statistics with D3 helpers</h2>
+    <p>Once the data is typed correctly, D3 provides small helpers for the kinds of summaries every chart needs:</p>
+    <pre><code>d3.min(data, d =&gt; d.lifeExp);     // smallest
+d3.max(data, d =&gt; d.lifeExp);     // largest
+d3.extent(data, d =&gt; d.lifeExp);  // [min, max]  — handy for scale .domain()
+d3.mean(data, d =&gt; d.lifeExp);    // arithmetic mean
+d3.median(data, d =&gt; d.lifeExp);
+d3.sum(data, d =&gt; d.pop);</code></pre>
+    <p>Computed on the Gapminder 2007 slice:</p>
+    <table id="summary-table">
+        <thead><tr><th>Helper</th><th>Result</th></tr></thead>
+        <tbody></tbody>
+    </table>
+
+    <h2>4. Grouping and rolling up</h2>
+    <p>Two related helpers turn an array of rows into a <code>Map</code> keyed by some field:</p>
+    <ul>
+        <li><code>d3.group(data, d =&gt; d.continent)</code> — groups rows by continent (returns
+            <code>Map&lt;continent, row[]&gt;</code>)
+        </li>
+        <li><code>d3.rollup(data, reducer, d =&gt; d.continent)</code> — applies a reducer to each group
+            (returns <code>Map&lt;continent, summary&gt;</code>)</li>
+    </ul>
+    <p>Rolling up the mean life expectancy per continent in 2007:</p>
+    <pre><code>const meanByContinent = d3.rollup(
+    data2007,
+    rows =&gt; d3.mean(rows, d =&gt; d.lifeExp),
+    d =&gt; d.continent
+);
+// → Map { "Africa" =&gt; 54.81, "Americas" =&gt; 73.61, ... }</code></pre>
+    <table id="rollup-table">
+        <thead><tr><th>continent</th><th>countries</th><th>mean lifeExp (2007)</th></tr></thead>
+        <tbody></tbody>
+    </table>
+
+    <h2>5. Formatting numbers and dates</h2>
+    <p>Raw numbers are rarely the right thing to put on a chart. D3 ships compact format specifiers:</p>
+    <pre><code>d3.format(",")(1234567);          // "1,234,567"
+d3.format("$,.0f")(1234567);      // "$1,234,567"
+d3.format(".1%")(0.0734);         // "7.3%"
+d3.format("~s")(2400);            // "2.4k"
+
+const fmtDate = d3.timeFormat("%Y-%m-%d");
+fmtDate(new Date());              // e.g. "2026-04-28"</code></pre>
+    <p>Live samples:</p>
+    <table id="format-table">
+        <thead><tr><th>Specifier</th><th>Input</th><th>Output</th></tr></thead>
+        <tbody></tbody>
+    </table>
+
+    <div class="note"><strong>Takeaway.</strong> An accessor at <code>d3.csv</code> time is usually the right
+        place to coerce types. Once the data is typed correctly, <code>d3.extent</code>, <code>d3.group</code>,
+        <code>d3.rollup</code>, and <code>d3.format</code> handle most of the pre-plot work. The capstone in
+        <code>09e</code> combines everything from <code>09a</code>–<code>09d</code> into a full Gapminder
+        scatterplot with four scales, axes, a legend, and tooltips.</div>
+
+    <p class="tutorial-nav"><a href="09c-scales-and-axes.html">← 09c — Scales and Axes</a> ·
+        <a href="index.html">L9 index</a> ·
+        <a href="09e-first-scatterplot.html">09e — First Scatterplot →</a></p>
+
+    <script>
+        function showRow(elId, row) {
+            document.getElementById(elId).textContent = JSON.stringify(row, null, 2);
+        }
+        function reportTypes(elId, row) {
+            const lines = Object.entries(row).map(([k, v]) => `typeof ${k} = "${typeof v}"`);
+            document.getElementById(elId).textContent = lines.join(" · ");
+        }
+        const fmtNum = d3.format(",.2f");
+        const fmtInt = d3.format(",");
+        const fmtPop = d3.format("~s");
+
+        // ---- 1. raw load ----
+        d3.csv("./datasets/gapminder.csv").then(raw => {
+            showRow("raw-row-output", raw[0]);
+            reportTypes("raw-types", raw[0]);
+        });
+
+        // ---- 2. parsed load ----
+        d3.csv("./datasets/gapminder.csv", d => ({
+            country: d.country,
+            continent: d.continent,
+            year: +d.year,
+            lifeExp: +d.lifeExp,
+            pop: +d.pop,
+            gdpPercap: +d.gdpPercap
+        })).then(data => {
+            showRow("parsed-row-output", data[0]);
+            reportTypes("parsed-types", data[0]);
+
+            const data2007 = data.filter(d => d.year === 2007);
+
+            // ---- 3. summary helpers ----
+            const summary = [
+                ["d3.min(data2007, d =&gt; d.lifeExp)",     fmtNum(d3.min(data2007, d => d.lifeExp))],
+                ["d3.max(data2007, d =&gt; d.lifeExp)",     fmtNum(d3.max(data2007, d => d.lifeExp))],
+                ["d3.extent(data2007, d =&gt; d.lifeExp)",  "[" + d3.extent(data2007, d => d.lifeExp).map(fmtNum).join(", ") + "]"],
+                ["d3.mean(data2007, d =&gt; d.lifeExp)",    fmtNum(d3.mean(data2007, d => d.lifeExp))],
+                ["d3.median(data2007, d =&gt; d.lifeExp)",  fmtNum(d3.median(data2007, d => d.lifeExp))],
+                ["d3.sum(data2007, d =&gt; d.pop)",         fmtPop(d3.sum(data2007, d => d.pop))]
+            ];
+            const sumBody = document.querySelector("#summary-table tbody");
+            summary.forEach(([k, v]) => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `<td><code>${k}</code></td><td>${v}</td>`;
+                sumBody.appendChild(tr);
+            });
+
+            // ---- 4. group / rollup ----
+            const countByContinent = d3.rollup(data2007, rows => rows.length, d => d.continent);
+            const meanByContinent  = d3.rollup(data2007, rows => d3.mean(rows, d => d.lifeExp), d => d.continent);
+
+            const rollBody = document.querySelector("#rollup-table tbody");
+            const continents = Array.from(meanByContinent.keys()).sort();
+            continents.forEach(c => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `<td>${c}</td><td>${countByContinent.get(c)}</td><td>${fmtNum(meanByContinent.get(c))}</td>`;
+                rollBody.appendChild(tr);
+            });
+
+            // ---- 5. formatters ----
+            const formats = [
+                ['d3.format(",")',       1234567,     d3.format(",")(1234567)],
+                ['d3.format("$,.0f")',   1234567,     d3.format("$,.0f")(1234567)],
+                ['d3.format(".1%")',     0.0734,      d3.format(".1%")(0.0734)],
+                ['d3.format("~s")',      2400,        d3.format("~s")(2400)],
+                ['d3.format("~s")',      1.5e9,       d3.format("~s")(1.5e9)],
+                ['d3.timeFormat("%Y-%m-%d")', "today", d3.timeFormat("%Y-%m-%d")(new Date())]
+            ];
+            const fmtBody = document.querySelector("#format-table tbody");
+            formats.forEach(([k, inp, out]) => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `<td><code>${k}</code></td><td><code>${inp}</code></td><td><code>${out}</code></td>`;
+                fmtBody.appendChild(tr);
+            });
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>09e — First Scatterplot</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="./_shared/chart.js"></script>
+    <link rel="stylesheet" href="./_shared/chart.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/styles/github.min.css">
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/highlight.min.js"></script>
+    <script>document.addEventListener("DOMContentLoaded", () => hljs.highlightAll());</script>
+</head>
+
+<body>
+    <h1>09e — First Scatterplot</h1>
+    <p class="lead">Gapminder scatterplot, end-to-end: GDP per capita on a log axis, life expectancy on the y-axis,
+        size by population, color by continent. Selections, scales, axes, data join, legend, and tooltips, in
+        about 70 lines of D3.</p>
+
+    <h2>The finished chart</h2>
+    <div class="container" id="chart-final"></div>
+
+    <h2>Step 1 — the margin convention</h2>
+    <p>Same skeleton as every previous tutorial. The right margin is wider than usual to leave room for the
+        legend on the right of the plot area.</p>
+    <pre><code>const width = 800, height = 520;
+const margin = { top: 70, right: 150, bottom: 60, left: 70 };
+const innerW = width  - margin.left - margin.right;
+const innerH = height - margin.top  - margin.bottom;</code></pre>
+    <p><strong>State after step 1:</strong> empty SVG with the inner plot area marked out.</p>
+    <div class="container" id="chart-step-1"></div>
+
+    <h2>Step 2 — load and parse the data</h2>
+    <p>Gapminder is a long table: one row per country per year, from 1952 to 2007. We load the CSV with an
+        accessor (coerces numeric columns), then filter to the 2007 snapshot — 142 rows.</p>
+    <pre><code>const raw = await d3.csv("./datasets/gapminder.csv", d =&gt; ({
+    country:   d.country,
+    continent: d.continent,
+    year:     +d.year,
+    lifeExp:  +d.lifeExp,
+    pop:      +d.pop,
+    gdpPercap:+d.gdpPercap
+}));
+const data = raw.filter(d =&gt; d.year === 2007);</code></pre>
+    <p><strong>State after step 2:</strong> no visible change — the data is in memory, not yet drawn.</p>
+
+    <h2>Step 3 — define the four scales</h2>
+    <p>One scale per visual channel. Each <code>.domain</code> is computed from the data with
+        <code>d3.extent</code> so the chart adapts to the dataset; each <code>.range</code> is fixed in pixels
+        (or in colors, for the categorical scale).</p>
+    <pre><code>const x     = d3.scaleLog()   .domain(d3.extent(data, d =&gt; d.gdpPercap)).nice().range([0, innerW]);
+const y     = d3.scaleLinear().domain(d3.extent(data, d =&gt; d.lifeExp)) .nice().range([innerH, 0]);
+const r     = d3.scaleSqrt()  .domain(d3.extent(data, d =&gt; d.pop))            .range([3, 32]);
+const color = d3.scaleOrdinal()
+    .domain(["Africa","Americas","Asia","Europe","Oceania"])
+    .range (["#009E73","#D55E00","#0072B2","#CC79A7","#E69F00"]);</code></pre>
+    <p><strong>State after step 3:</strong> still no visible change — scales are pure functions,
+        nothing is rendered yet.</p>
+
+    <h2>Step 4 — canvas and axes</h2>
+    <p>Build the SVG, append the inner plot-area group, add the two axes. The format specifier
+        <code>"~s"</code> renders GDP ticks with SI prefixes (<code>1k</code>, <code>10k</code>,
+        <code>100k</code>) instead of long digit strings.</p>
+    <pre><code>const svg = d3.select("#chart").append("svg")
+    .attr("width", width).attr("height", height)
+  .append("g")
+    .attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+svg.append("g")
+    .attr("class", "axis")
+    .attr("transform", `translate(0, ${innerH})`)
+    .call(d3.axisBottom(x).ticks(6, "~s"));
+
+svg.append("g").attr("class", "axis").call(d3.axisLeft(y));</code></pre>
+    <p><strong>State after step 4:</strong> the two axes appear, but the plot area is still empty of marks.</p>
+    <div class="container" id="chart-step-4"></div>
+
+    <h2>Step 5 — the data join: one circle per country</h2>
+    <p>Every visual channel comes from the bound row, through the scale defined in step 3:</p>
+    <pre><code>svg.selectAll("circle")
+    .data(data)
+    .join("circle")
+        .attr("cx",     d =&gt; x(d.gdpPercap))     // log-scaled x
+        .attr("cy",     d =&gt; y(d.lifeExp))       // linear y
+        .attr("r",      d =&gt; r(d.pop))           // sqrt radius (area ∝ pop)
+        .attr("fill",   d =&gt; color(d.continent)) // ordinal color
+        .attr("opacity", 0.7)
+        .attr("stroke",  "white");</code></pre>
+    <p>Each line of <code>.attr</code> is one visual channel of the scatterplot idiom: position by
+        <code>(x, y)</code>, size by area, color by category. This is the moment all five concepts of L9
+        come together — selection, data, join, scale, attribute.</p>
+    <p><strong>State after step 5:</strong> the scatter is there. Still missing: the legend (no way to know
+        which color is which continent) and the chart title.</p>
+    <div class="container" id="chart-step-5"></div>
+
+    <h2>Step 6 — title, legend, and tooltips</h2>
+    <p>The legend is built with the same join pattern, but applied to the array of continent names instead of
+        the array of countries. The tooltip is the simplest possible kind: a native SVG <code>&lt;title&gt;</code>
+        element appended to each circle.</p>
+    <pre><code>// chart title in the outer SVG (above the plot area)
+root.append("text")
+    .attr("x", margin.left).attr("y", 32)
+    .style("font-size", "var(--text-lg)").style("font-weight", "bold")
+    .text("Gapminder 2007 — life expectancy vs. GDP per capita");
+
+// tooltip: hover any circle to read the country
+svg.selectAll("circle")
+    .append("title")
+    .text(d =&gt; `${d.country}\nlife exp: ${d.lifeExp.toFixed(1)} yr` +
+               `\npop: ${d3.format(",")(d.pop)}` +
+               `\nGDP pc: ${d3.format("$,.0f")(d.gdpPercap)}`);
+
+// legend: one row per continent, joined to the array of names
+const legend = svg.append("g")
+    .attr("transform", `translate(${innerW + 20}, 10)`);
+const items = legend.selectAll("g.item")
+    .data(continents).join("g")
+    .attr("class", "item")
+    .attr("transform", (d, i) =&gt; `translate(0, ${i * 22 + 10})`);
+items.append("circle").attr("r", 7).attr("fill", (d, i) =&gt; palette[i]);
+items.append("text").attr("x", 14).attr("y", 4).text(d =&gt; d);</code></pre>
+    <p><strong>State after step 6:</strong> the chart is complete — same as the finished chart at the top of
+        the page.</p>
+    <div class="container" id="chart-step-6"></div>
+
+    <h2>What every block contributes</h2>
+    <table>
+        <thead>
+            <tr><th>Step</th><th>Code</th><th>Visual outcome</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>1</td><td><code>&lt;svg&gt;</code> + inner <code>&lt;g&gt;</code> + margins</td><td>canvas and
+                inset plot area</td></tr>
+            <tr><td>2</td><td><code>d3.csv</code> with accessor + <code>filter</code></td><td>typed array of 142
+                rows for year 2007 (no visible change)</td></tr>
+            <tr><td>3</td><td><code>scaleLog</code> · <code>scaleLinear</code> · <code>scaleSqrt</code> ·
+                <code>scaleOrdinal</code></td><td>data → channel mappings (no visible change)</td></tr>
+            <tr><td>4</td><td><code>axisBottom</code>, <code>axisLeft</code></td><td>readable axes with SI-prefixed
+                ticks</td></tr>
+            <tr><td>5</td><td><code>.data(data).join("circle")</code> + <code>.attr</code></td><td>one circle per
+                country, encoded on four channels</td></tr>
+            <tr><td>6</td><td>title + <code>append("title")</code> + legend <code>&lt;g&gt;</code></td><td>chart
+                title, hover tooltips, and continent legend</td></tr>
+        </tbody>
+    </table>
+
+    <div class="note"><strong>Takeaway.</strong> A complete, publication-quality scatterplot in ~70 lines of
+        D3, every line traceable to a concept introduced in 09a–09d.</div>
+
+    <p class="tutorial-nav"><a href="09d-loading-data.html">← 09d — Loading Data</a> ·
+        <a href="index.html">L9 index</a></p>
+
+    <script>
+        const CHART_OPTS = {
+            width: 800,
+            margin: { top: 70, right: 150, bottom: 60, left: 70 }
+        };
+        const CHART_H = 520;
+        const continents = ["Africa", "Americas", "Asia", "Europe", "Oceania"];
+        const palette    = ["#009E73", "#D55E00", "#0072B2", "#CC79A7", "#E69F00"];
+
+        d3.csv("./datasets/gapminder.csv", d => ({
+            country: d.country, continent: d.continent,
+            year: +d.year, lifeExp: +d.lifeExp,
+            pop: +d.pop, gdpPercap: +d.gdpPercap
+        })).then(raw => {
+            const data = raw.filter(d => d.year === 2007);
+
+            const x = d3.scaleLog()
+                .domain(d3.extent(data, d => d.gdpPercap)).nice()
+                .range([0, CHART_OPTS.width - CHART_OPTS.margin.left - CHART_OPTS.margin.right]);
+            const y = d3.scaleLinear()
+                .domain(d3.extent(data, d => d.lifeExp)).nice()
+                .range([CHART_H - CHART_OPTS.margin.top - CHART_OPTS.margin.bottom, 0]);
+            const r = d3.scaleSqrt()
+                .domain(d3.extent(data, d => d.pop)).range([3, 32]);
+            const color = d3.scaleOrdinal().domain(continents).range(palette);
+
+            // Each step renders into its own canvas, accumulating state.
+            // Steps 2 and 3 produce no visible change so they don't get their own canvas.
+
+            // ---------- helpers ----------
+            function drawAxes(c) {
+                c.plot.append("g").attr("class", "axis")
+                    .attr("transform", `translate(0, ${c.innerH})`)
+                    .call(d3.axisBottom(x).ticks(6, "~s"));
+                c.plot.append("g").attr("class", "axis").call(d3.axisLeft(y));
+                c.plot.append("text")
+                    .attr("x", c.innerW / 2).attr("y", c.innerH + 30).attr("text-anchor", "middle")
+                    .style("font-size", "var(--text-md)").style("fill", "#555")
+                    .text("GDP per capita (log scale, USD)");
+                c.plot.append("text")
+                    .attr("transform", `translate(-40, ${c.innerH / 2}) rotate(-90)`)
+                    .attr("text-anchor", "middle")
+                    .style("font-size", "var(--text-md)").style("fill", "#555")
+                    .text("Life expectancy (years)");
+            }
+
+            function drawCircles(c) {
+                c.plot.selectAll("circle")
+                    .data(data).join("circle")
+                    .attr("cx", d => x(d.gdpPercap)).attr("cy", d => y(d.lifeExp))
+                    .attr("r", d => r(d.pop))
+                    .attr("fill", d => color(d.continent))
+                    .attr("opacity", 0.7).attr("stroke", "white")
+                    .append("title")
+                    .text(d => `${d.country}\nlife exp: ${d.lifeExp.toFixed(1)} yr\npop: ${d3.format(",")(d.pop)}\nGDP pc: ${d3.format("$,.0f")(d.gdpPercap)}`);
+            }
+
+            function drawTitleAndLegend(c) {
+                c.root.append("text")
+                    .attr("x", c.margin.left).attr("y", 32)
+                    .style("font-size", "var(--text-lg)").style("font-weight", "bold")
+                    .text("Gapminder 2007 — life expectancy vs. GDP per capita");
+                const legend = c.plot.append("g")
+                    .attr("transform", `translate(${c.innerW + 20}, 10)`);
+                legend.append("text")
+                    .attr("y", -6).style("font-weight", "bold").style("font-size", "var(--text-md)")
+                    .text("Continent");
+                const items = legend.selectAll("g.item")
+                    .data(continents).join("g")
+                    .attr("class", "item")
+                    .attr("transform", (d, i) => `translate(0, ${i * 22 + 10})`);
+                items.append("circle").attr("r", 7).attr("fill", (d, i) => palette[i]).attr("opacity", 0.8);
+                items.append("text").attr("x", 14).attr("y", 4).style("font-size", "var(--text-md)").text(d => d);
+            }
+
+            // ---------- finished chart (top of page) ----------
+            const cFinal = makeCanvas("#chart-final", CHART_H, CHART_OPTS);
+            drawTitleAndLegend(cFinal);
+            drawAxes(cFinal);
+            drawCircles(cFinal);
+
+            // ---------- step 1: just the margin / plot area ----------
+            makeCanvas("#chart-step-1", CHART_H, { ...CHART_OPTS, showPlotArea: true });
+
+            // ---------- step 4: + axes ----------
+            const c4 = makeCanvas("#chart-step-4", CHART_H, CHART_OPTS);
+            drawAxes(c4);
+
+            // ---------- step 5: + circles ----------
+            const c5 = makeCanvas("#chart-step-5", CHART_H, CHART_OPTS);
+            drawAxes(c5);
+            drawCircles(c5);
+
+            // ---------- step 6: + title + legend (≡ finished chart) ----------
+            const c6 = makeCanvas("#chart-step-6", CHART_H, CHART_OPTS);
+            drawTitleAndLegend(c6);
+            drawAxes(c6);
+            drawCircles(c6);
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>09a — Building SVG with D3</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" href="./_shared/chart.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/styles/github.min.css">
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/highlight.min.js"></script>
+    <script>document.addEventListener("DOMContentLoaded", () => hljs.highlightAll());</script>
+  </head>
+
+  <body>
+    <h1>09a — Building SVG with D3</h1>
+    <p class="lead">
+      Before any data, before any scales, learn the mechanics: how a D3 page is wired and how to draw an SVG
+      by hand using <code>d3.select</code>, <code>.append</code>, <code>.attr</code>, and <code>.style</code>.
+      The middle of this tutorial walks through every SVG primitive and the attributes you can customise on each.
+    </p>
+
+    <h2>1. The HTML scaffolding</h2>
+    <p>
+      A D3 page is a normal HTML page with two extra ingredients: the D3 library, loaded from a CDN, and a
+      container element where the chart will live.
+    </p>
+    <pre><code>&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+    &lt;meta charset="UTF-8"&gt;
+    &lt;title&gt;My chart&lt;/title&gt;
+    &lt;script src="https://d3js.org/d3.v7.min.js"&gt;&lt;/script&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;h1&gt;My chart&lt;/h1&gt;
+    &lt;div id="chart"&gt;&lt;/div&gt;
+    &lt;script&gt;
+        // D3 code goes here. The variable d3 is now global.
+    &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+    <ul>
+      <li>the <code>&lt;script src="…d3.v7.min.js"&gt;</code> tag loads the D3 library and exposes
+        <code>d3</code> as a global</li>
+      <li>the <code>&lt;div id="chart"&gt;</code> is an empty container we will append SVG into</li>
+      <li>our own <code>&lt;script&gt;</code> tag runs <em>after</em> the body, so the container exists by the
+        time D3 looks it up</li>
+    </ul>
+
+    <h2>2. The first D3 line</h2>
+    <p>
+      D3's central idea is method chaining: every method returns a selection, so you can keep calling methods
+      on the same object. The simplest possible D3 line:
+    </p>
+    <pre><code>d3.select("#hello-target")
+    .append("p")
+    .text("Hello from D3!");</code></pre>
+    <p>
+      Read it as: <em>select the element with id <code>hello-target</code></em>, <em>append a
+      <code>&lt;p&gt;</code></em>, <em>set its text content</em>. Click the button to run it (it appends a new
+      paragraph each click):
+    </p>
+    <p><button id="hello-run">Run d3.select…append…text</button></p>
+    <div id="hello-target" style="border: 1px dashed #bbb; min-height: 2em; padding: 0.5em"></div>
+
+    <h2>3. Building an SVG canvas</h2>
+    <p>
+      An SVG canvas is just an SVG element with a width and a height. D3 builds it the same way as a paragraph
+      — select a container, append, set attributes:
+    </p>
+    <pre><code>const svg = d3.select("#canvas-target")
+    .append("svg")
+        .attr("width",  300)
+        .attr("height", 150)
+        .style("background", "#fafafa")
+        .style("border",     "1px solid #ddd");</code></pre>
+    <p>
+      Notice that <code>append("svg")</code> returns a new selection wrapping the freshly created
+      <code>&lt;svg&gt;</code> element, so the subsequent <code>.attr</code> and <code>.style</code> calls
+      operate on it, not on the parent <code>div</code>.
+    </p>
+    <div id="canvas-target"></div>
+
+    <p>The next six sections walk through every SVG primitive — <code>&lt;rect&gt;</code>,
+      <code>&lt;circle&gt;</code>, <code>&lt;line&gt;</code>, <code>&lt;path&gt;</code>, <code>&lt;text&gt;</code>,
+      and <code>&lt;g&gt;</code> — with several variants per element and the attributes you can change.</p>
+
+    <!-- =============================================================
+         §4. <rect>
+         ============================================================= -->
+    <h2>4. <code>&lt;rect&gt;</code> — rectangles</h2>
+    <p>The simplest mark: an axis-aligned rectangle. Position by its <strong>top-left corner</strong>
+      (<code>x</code>, <code>y</code>) and size by <code>width</code> and <code>height</code>.</p>
+    <pre><code>// basic
+svg.append("rect")
+    .attr("x", 30).attr("y", 30)
+    .attr("width", 80).attr("height", 60)
+    .attr("fill", "#0072B2");
+
+// thick stroke
+svg.append("rect")
+    .attr("x", 150).attr("y", 30)
+    .attr("width", 80).attr("height", 60)
+    .attr("fill",   "#0072B2")
+    .attr("stroke", "#1a1a1a")
+    .attr("stroke-width", 4);
+
+// dashed stroke (no fill)
+svg.append("rect")
+    .attr("x", 270).attr("y", 30)
+    .attr("width", 80).attr("height", 60)
+    .attr("fill", "none")
+    .attr("stroke", "#0072B2")
+    .attr("stroke-width", 2)
+    .attr("stroke-dasharray", "6,4");
+
+// rounded corners (rx, ry)
+svg.append("rect")
+    .attr("x", 390).attr("y", 30)
+    .attr("width", 80).attr("height", 60)
+    .attr("rx", 12).attr("ry", 12)
+    .attr("fill", "#0072B2");
+
+// semi-transparent
+svg.append("rect")
+    .attr("x", 510).attr("y", 30)
+    .attr("width", 80).attr("height", 60)
+    .attr("fill", "#0072B2")
+    .attr("opacity", 0.35);</code></pre>
+    <div class="container" id="demo-rect"></div>
+    <table>
+      <thead><tr><th>Attribute</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><code>x</code>, <code>y</code></td><td>top-left corner of the rectangle</td></tr>
+        <tr><td><code>width</code>, <code>height</code></td><td>size in pixels</td></tr>
+        <tr><td><code>fill</code></td><td>interior color (use <code>"none"</code> for an outline-only rect)</td></tr>
+        <tr><td><code>stroke</code>, <code>stroke-width</code></td><td>outline color and thickness</td></tr>
+        <tr><td><code>stroke-dasharray</code></td><td>dash pattern, e.g. <code>"6,4"</code> = 6px on, 4px off</td></tr>
+        <tr><td><code>rx</code>, <code>ry</code></td><td>corner radius (rounded rectangles)</td></tr>
+        <tr><td><code>opacity</code>, <code>fill-opacity</code></td><td>overall / fill-only transparency, 0–1</td></tr>
+      </tbody>
+    </table>
+
+    <!-- =============================================================
+         §5. <circle>
+         ============================================================= -->
+    <h2>5. <code>&lt;circle&gt;</code> — circles</h2>
+    <p>Centred at (<code>cx</code>, <code>cy</code>) with radius <code>r</code>. The most common mark in
+      scatterplots and bubble charts.</p>
+    <pre><code>// basic
+svg.append("circle")
+    .attr("cx", 60).attr("cy", 60).attr("r", 28)
+    .attr("fill", "#0072B2");
+
+// ring (no fill, just stroke)
+svg.append("circle")
+    .attr("cx", 180).attr("cy", 60).attr("r", 28)
+    .attr("fill", "none")
+    .attr("stroke", "#0072B2").attr("stroke-width", 3);
+
+// row of varying radii — same cy, increasing r
+[8, 14, 20, 26, 32].forEach((r, i) =&gt; {
+    svg.append("circle")
+        .attr("cx", 320 + i * 56).attr("cy", 60).attr("r", r)
+        .attr("fill", "#0072B2").attr("opacity", 0.7);
+});</code></pre>
+    <div class="container" id="demo-circle"></div>
+    <table>
+      <thead><tr><th>Attribute</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><code>cx</code>, <code>cy</code></td><td>centre of the circle</td></tr>
+        <tr><td><code>r</code></td><td>radius in pixels</td></tr>
+        <tr><td><code>fill</code></td><td>interior color (<code>"none"</code> → ring)</td></tr>
+        <tr><td><code>stroke</code>, <code>stroke-width</code></td><td>outline color and thickness</td></tr>
+        <tr><td><code>opacity</code></td><td>0–1; use ~0.6–0.8 when many circles overlap</td></tr>
+      </tbody>
+    </table>
+
+    <!-- =============================================================
+         §6. <line>
+         ============================================================= -->
+    <h2>6. <code>&lt;line&gt;</code> — line segments</h2>
+    <p>A straight segment from (<code>x1</code>, <code>y1</code>) to (<code>x2</code>, <code>y2</code>).
+      Lines have no fill — only stroke attributes apply.</p>
+    <pre><code>// thin solid
+svg.append("line")
+    .attr("x1", 30).attr("y1", 60)
+    .attr("x2", 130).attr("y2", 60)
+    .attr("stroke", "#1a1a1a");
+
+// thick solid
+svg.append("line")
+    .attr("x1", 170).attr("y1", 60)
+    .attr("x2", 270).attr("y2", 60)
+    .attr("stroke", "#1a1a1a")
+    .attr("stroke-width", 6);
+
+// dashed
+svg.append("line")
+    .attr("x1", 310).attr("y1", 60)
+    .attr("x2", 410).attr("y2", 60)
+    .attr("stroke", "#1a1a1a")
+    .attr("stroke-width", 2)
+    .attr("stroke-dasharray", "6,4");
+
+// thick with rounded caps
+svg.append("line")
+    .attr("x1", 450).attr("y1", 60)
+    .attr("x2", 550).attr("y2", 60)
+    .attr("stroke", "#0072B2")
+    .attr("stroke-width", 10)
+    .attr("stroke-linecap", "round");</code></pre>
+    <div class="container" id="demo-line"></div>
+    <table>
+      <thead><tr><th>Attribute</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><code>x1</code>, <code>y1</code>, <code>x2</code>, <code>y2</code></td><td>the two endpoints</td></tr>
+        <tr><td><code>stroke</code>, <code>stroke-width</code></td><td>colour and thickness</td></tr>
+        <tr><td><code>stroke-dasharray</code></td><td>dash pattern (e.g. <code>"6,4"</code>, <code>"2,3"</code> for dotted)</td></tr>
+        <tr><td><code>stroke-linecap</code></td><td>line ends: <code>"butt"</code> (default), <code>"round"</code>, <code>"square"</code></td></tr>
+      </tbody>
+    </table>
+
+    <!-- =============================================================
+         §7. <path>
+         ============================================================= -->
+    <h2>7. <code>&lt;path&gt;</code> — arbitrary shapes</h2>
+    <p>The most flexible primitive. The shape is described by the <code>d</code> attribute, a tiny string
+      language: <code>M x y</code> (MoveTo), <code>L x y</code> (LineTo), <code>Q cx cy x y</code> (Quadratic
+      curve), <code>C c1x c1y c2x c2y x y</code> (Cubic), <code>Z</code> (close back to the start). In real
+      D3 work we rarely write these strings by hand — there are shape generators (covered in
+      <code>DV10</code>) that build them for us. Here we write a few by hand to make the language concrete:</p>
+    <pre><code>// triangle: move to corner, lines to the other two, close
+svg.append("path")
+    .attr("d", "M 60 110 L 100 30 L 140 110 Z")
+    .attr("fill", "#0072B2");
+
+// arrow (closed shape)
+svg.append("path")
+    .attr("d", "M 220 50 L 280 50 L 280 30 L 320 70 L 280 110 L 280 90 L 220 90 Z")
+    .attr("fill", "#E69F00");
+
+// smooth curve (Q = quadratic Bezier)
+svg.append("path")
+    .attr("d", "M 380 90 Q 460 10, 540 90")
+    .attr("fill", "none")
+    .attr("stroke", "#009E73").attr("stroke-width", 3);</code></pre>
+    <div class="container" id="demo-path"></div>
+    <table>
+      <thead><tr><th>Attribute</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><code>d</code></td><td>the path data — a sequence of commands and coordinates</td></tr>
+        <tr><td><code>fill</code></td><td>interior; use <code>"none"</code> for an open curve</td></tr>
+        <tr><td><code>stroke</code>, <code>stroke-width</code></td><td>outline of the path</td></tr>
+        <tr><td colspan="2"><strong>Most common <code>d</code> commands:</strong>
+          <code>M x y</code> move to · <code>L x y</code> line to · <code>Q cx cy x y</code> quadratic curve ·
+          <code>C c1x c1y c2x c2y x y</code> cubic curve · <code>A …</code> arc · <code>Z</code> close.
+          Lower-case (<code>m</code>, <code>l</code>, …) means relative coordinates.</td></tr>
+      </tbody>
+    </table>
+
+    <!-- =============================================================
+         §8. <text>
+         ============================================================= -->
+    <h2>8. <code>&lt;text&gt;</code> — labels</h2>
+    <p>Position the text's <strong>baseline</strong> at (<code>x</code>, <code>y</code>). The horizontal
+      relationship of the text to that point is set by <code>text-anchor</code>:</p>
+    <pre><code>// the same x for all three; only text-anchor changes
+svg.append("text").attr("x", 150).attr("y", 50)
+    .attr("text-anchor", "start") .text("anchor=start");
+
+svg.append("text").attr("x", 350).attr("y", 50)
+    .attr("text-anchor", "middle").text("anchor=middle");
+
+svg.append("text").attr("x", 550).attr("y", 50)
+    .attr("text-anchor", "end")   .text("anchor=end");
+
+// styling: size, weight, stroke
+svg.append("text").attr("x", 30).attr("y", 110)
+    .style("font-size", "11px").attr("fill", "#666").text("small");
+
+svg.append("text").attr("x", 130).attr("y", 110)
+    .style("font-weight", 700).text("BOLD");
+
+svg.append("text").attr("x", 240).attr("y", 110)
+    .attr("fill", "#0072B2").attr("stroke", "#1a1a1a").attr("stroke-width", 0.5)
+    .text("stroked");</code></pre>
+    <div class="container" id="demo-text"></div>
+    <table>
+      <thead><tr><th>Attribute</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><code>x</code>, <code>y</code></td><td>position of the text's baseline anchor point</td></tr>
+        <tr><td><code>dx</code>, <code>dy</code></td><td>small offsets from (<code>x</code>, <code>y</code>) — handy for fine-tuning</td></tr>
+        <tr><td><code>text-anchor</code></td><td><code>"start"</code> | <code>"middle"</code> | <code>"end"</code> — horizontal alignment relative to (x, y)</td></tr>
+        <tr><td><code>font-size</code></td><td>size in pixels (use <code>style</code> with <code>"px"</code>)</td></tr>
+        <tr><td><code>font-family</code>, <code>font-weight</code></td><td>typeface and weight</td></tr>
+        <tr><td><code>fill</code>, <code>stroke</code></td><td>text color; stroke is rare but useful for outline effects</td></tr>
+      </tbody>
+    </table>
+
+    <!-- =============================================================
+         §9. <g> — group
+         ============================================================= -->
+    <h2>9. <code>&lt;g&gt;</code> — groups and transforms</h2>
+    <p>A <code>&lt;g&gt;</code> draws nothing of its own; it groups child elements so that a single
+      <code>transform</code> applies to all of them. The transform composes — <code>translate</code>,
+      <code>rotate</code>, and <code>scale</code> can stack.</p>
+    <pre><code>// build a tiny "house" inside a group, then place it three different ways
+function house(parent) {
+    parent.append("rect")
+        .attr("x", -20).attr("y", -10).attr("width", 40).attr("height", 30)
+        .attr("fill", "#0072B2");
+    parent.append("path")
+        .attr("d", "M -22 -10 L 0 -32 L 22 -10 Z")
+        .attr("fill", "#E69F00");
+}
+
+// just translated
+const a = svg.append("g").attr("transform", "translate(80, 70)");
+house(a);
+
+// translate + rotate
+const b = svg.append("g").attr("transform", "translate(220, 70) rotate(20)");
+house(b);
+
+// translate + scale
+const c = svg.append("g").attr("transform", "translate(360, 70) scale(1.4)");
+house(c);
+
+// nested: inner translate adds to outer
+const outer = svg.append("g").attr("transform", "translate(480, 50)");
+const inner = outer.append("g").attr("transform", "translate(40, 20) rotate(-15)");
+house(inner);</code></pre>
+    <div class="container" id="demo-g"></div>
+    <table>
+      <thead><tr><th>Transform</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td><code>translate(x, y)</code></td><td>shift children by (x, y)</td></tr>
+        <tr><td><code>rotate(deg)</code></td><td>rotate children around (0, 0); use <code>rotate(deg cx cy)</code> for a different pivot</td></tr>
+        <tr><td><code>scale(s)</code></td><td>scale uniformly; <code>scale(sx, sy)</code> for non-uniform</td></tr>
+        <tr><td colspan="2">Multiple transforms separated by spaces apply <strong>right-to-left</strong>: in <code>translate(…) rotate(…)</code> the rotation happens first, then the translation. Nested <code>&lt;g&gt;</code>s achieve the same composition more explicitly.</td></tr>
+      </tbody>
+    </table>
+
+    <!-- =============================================================
+         §10. coordinate system
+         ============================================================= -->
+    <h2>10. The SVG coordinate system</h2>
+    <p>Two facts that catch every newcomer:</p>
+    <ul>
+      <li>the origin <code>(0, 0)</code> is at the <strong>top-left</strong> corner of the SVG</li>
+      <li><strong>y grows downward</strong> — the opposite of math notation</li>
+    </ul>
+    <p>The diagram below shows three points at <code>(0, 0)</code>, <code>(120, 0)</code>, and
+      <code>(0, 60)</code>, drawn inside an SVG. The arrows show the direction of growing x and y. Notice that
+      the third point is <em>below</em> the first, even though its y value is "larger".</p>
+    <div class="container" id="coords"></div>
+
+    <!-- =============================================================
+         §11. live attribute playground
+         ============================================================= -->
+    <h2>11. Live attribute playground</h2>
+    <p>Move the sliders to change the attributes of a single circle. Each slider is wired with a plain DOM
+      event listener that reaches into the SVG via <code>d3.select</code> and updates one attribute. Same
+      mechanic as a fully interactive chart, just on a single element.</p>
+    <pre><code>// One circle, kept in a variable so we can update it.
+const dot = d3.select("#playground").append("svg")
+    .attr("width", 540).attr("height", 300)
+  .append("circle")
+    .attr("cx", 240).attr("cy", 120).attr("r", 24)
+    .attr("fill", "#0072B2");
+
+// On every slider input, set one attribute on the circle.
+d3.select("#slider-cx").on("input", function () { dot.attr("cx", +this.value); });
+d3.select("#slider-cy").on("input", function () { dot.attr("cy", +this.value); });
+d3.select("#slider-r" ).on("input", function () { dot.attr("r",  +this.value); });</code></pre>
+    <div>
+      <label>cx:
+        <input type="range" id="slider-cx" min="0" max="480" value="240" style="vertical-align: middle"/>
+        <span id="cx-val">240</span></label>
+      <label>cy:
+        <input type="range" id="slider-cy" min="0" max="240" value="120" style="vertical-align: middle"/>
+        <span id="cy-val">120</span></label>
+      <label>r:
+        <input type="range" id="slider-r" min="2" max="60" value="24" style="vertical-align: middle"/>
+        <span id="r-val">24</span></label>
+    </div>
+    <div class="container" id="playground"></div>
+
+    <div class="note">
+      <strong>Takeaway.</strong> Every D3 chart is, at the bottom, a chain of
+      <code>select → append → attr → style</code> calls operating on SVG elements. The next tutorial
+      (<code>09b</code>) replaces hand-appended elements with a data-driven join: one DOM element per row
+      of an array.
+    </div>
+
+    <p class="tutorial-nav">
+      <a href="index.html">← L9 index</a> ·
+      <a href="09b-data-driven-svg.html">09b — Data-Driven SVG →</a>
+    </p>
+
+    <script>
+      // ---------- §2. hello-D3 button ----------
+      document.getElementById("hello-run").addEventListener("click", () => {
+        d3.select("#hello-target").append("p").text("Hello from D3!");
+      });
+
+      // ---------- §3. SVG canvas ----------
+      d3.select("#canvas-target")
+        .append("svg")
+        .attr("width", 300).attr("height", 150)
+        .style("background", "#fafafa")
+        .style("border", "1px solid #ddd");
+
+      // ---------- shared helpers for §4–§9 ----------
+      function makeDemoSvg(selector, height = 140) {
+        return d3.select(selector).append("svg")
+          .attr("width", 600).attr("height", height)
+          .style("background", "#fafafa")
+          .style("border", "1px solid #ddd");
+      }
+      function labelBelow(svg, x, y, text) {
+        svg.append("text")
+          .attr("x", x).attr("y", y)
+          .attr("text-anchor", "middle")
+          .style("font-size", "var(--text-sm)")
+          .attr("fill", "#666")
+          .text(text);
+      }
+
+      // ---------- §4. <rect> ----------
+      {
+        const svg = makeDemoSvg("#demo-rect");
+        const W = 80, H = 60, Y = 24;
+        const slot = i => 30 + i * 120;
+
+        svg.append("rect").attr("x", slot(0)).attr("y", Y)
+          .attr("width", W).attr("height", H).attr("fill", "#0072B2");
+
+        svg.append("rect").attr("x", slot(1)).attr("y", Y)
+          .attr("width", W).attr("height", H).attr("fill", "#0072B2")
+          .attr("stroke", "#1a1a1a").attr("stroke-width", 4);
+
+        svg.append("rect").attr("x", slot(2)).attr("y", Y)
+          .attr("width", W).attr("height", H)
+          .attr("fill", "none")
+          .attr("stroke", "#0072B2").attr("stroke-width", 2)
+          .attr("stroke-dasharray", "6,4");
+
+        svg.append("rect").attr("x", slot(3)).attr("y", Y)
+          .attr("width", W).attr("height", H)
+          .attr("rx", 12).attr("ry", 12).attr("fill", "#0072B2");
+
+        svg.append("rect").attr("x", slot(4)).attr("y", Y)
+          .attr("width", W).attr("height", H)
+          .attr("fill", "#0072B2").attr("opacity", 0.35);
+
+        ["basic", "stroke", "dashed", "rounded", "translucent"]
+          .forEach((t, i) => labelBelow(svg, slot(i) + W / 2, Y + H + 22, t));
+      }
+
+      // ---------- §5. <circle> ----------
+      {
+        const svg = makeDemoSvg("#demo-circle");
+        svg.append("circle").attr("cx", 60).attr("cy", 60).attr("r", 28)
+          .attr("fill", "#0072B2");
+        labelBelow(svg, 60, 110, "basic");
+
+        svg.append("circle").attr("cx", 180).attr("cy", 60).attr("r", 28)
+          .attr("fill", "none").attr("stroke", "#0072B2").attr("stroke-width", 3);
+        labelBelow(svg, 180, 110, "ring");
+
+        const startX = 320;
+        [8, 14, 20, 26, 32].forEach((r, i) => {
+          svg.append("circle")
+            .attr("cx", startX + i * 56).attr("cy", 60).attr("r", r)
+            .attr("fill", "#0072B2").attr("opacity", 0.7);
+        });
+        labelBelow(svg, startX + 4 * 56 / 2 + 30, 110, "varying r");
+      }
+
+      // ---------- §6. <line> ----------
+      {
+        const svg = makeDemoSvg("#demo-line");
+        const Y = 60;
+
+        svg.append("line").attr("x1", 30).attr("y1", Y).attr("x2", 130).attr("y2", Y)
+          .attr("stroke", "#1a1a1a");
+        labelBelow(svg, 80, 100, "thin");
+
+        svg.append("line").attr("x1", 170).attr("y1", Y).attr("x2", 270).attr("y2", Y)
+          .attr("stroke", "#1a1a1a").attr("stroke-width", 6);
+        labelBelow(svg, 220, 100, "thick");
+
+        svg.append("line").attr("x1", 310).attr("y1", Y).attr("x2", 410).attr("y2", Y)
+          .attr("stroke", "#1a1a1a").attr("stroke-width", 2)
+          .attr("stroke-dasharray", "6,4");
+        labelBelow(svg, 360, 100, "dashed");
+
+        svg.append("line").attr("x1", 450).attr("y1", Y).attr("x2", 550).attr("y2", Y)
+          .attr("stroke", "#0072B2").attr("stroke-width", 10)
+          .attr("stroke-linecap", "round");
+        labelBelow(svg, 500, 100, "round caps");
+      }
+
+      // ---------- §7. <path> ----------
+      {
+        const svg = makeDemoSvg("#demo-path", 160);
+
+        svg.append("path")
+          .attr("d", "M 60 110 L 100 30 L 140 110 Z")
+          .attr("fill", "#0072B2");
+        labelBelow(svg, 100, 132, "triangle (M-L-L-Z)");
+
+        svg.append("path")
+          .attr("d", "M 220 50 L 280 50 L 280 30 L 320 70 L 280 110 L 280 90 L 220 90 Z")
+          .attr("fill", "#E69F00");
+        labelBelow(svg, 270, 132, "arrow");
+
+        svg.append("path")
+          .attr("d", "M 380 90 Q 460 10, 540 90")
+          .attr("fill", "none")
+          .attr("stroke", "#009E73").attr("stroke-width", 3);
+        labelBelow(svg, 460, 132, "curve (Q)");
+      }
+
+      // ---------- §8. <text> ----------
+      {
+        const svg = makeDemoSvg("#demo-text", 150);
+
+        // anchor demo: vertical reference lines so students can see what "anchor" means
+        [150, 350, 550].forEach(x => {
+          svg.append("line").attr("x1", x).attr("y1", 30).attr("x2", x).attr("y2", 60)
+            .attr("stroke", "#bbb").attr("stroke-dasharray", "2,2");
+        });
+        svg.append("text").attr("x", 150).attr("y", 50)
+          .attr("text-anchor", "start").text("anchor=start");
+        svg.append("text").attr("x", 350).attr("y", 50)
+          .attr("text-anchor", "middle").text("anchor=middle");
+        svg.append("text").attr("x", 550).attr("y", 50)
+          .attr("text-anchor", "end").text("anchor=end");
+        labelBelow(svg, 350, 78, "↑ all three text elements use the same x; dotted line marks it");
+
+        svg.append("text").attr("x", 30).attr("y", 120)
+          .style("font-size", "11px").attr("fill", "#666").text("small");
+        svg.append("text").attr("x", 110).attr("y", 120)
+          .style("font-weight", 700).text("BOLD");
+        svg.append("text").attr("x", 220).attr("y", 120)
+          .attr("fill", "#0072B2").attr("stroke", "#1a1a1a").attr("stroke-width", 0.5)
+          .text("stroked");
+        svg.append("text").attr("x", 350).attr("y", 120)
+          .style("font-family", "Georgia, serif").style("font-style", "italic")
+          .text("italic serif");
+      }
+
+      // ---------- §9. <g> ----------
+      {
+        const svg = makeDemoSvg("#demo-g", 170);
+        function house(parent) {
+          parent.append("rect")
+            .attr("x", -20).attr("y", -10).attr("width", 40).attr("height", 30)
+            .attr("fill", "#0072B2");
+          parent.append("path")
+            .attr("d", "M -22 -10 L 0 -32 L 22 -10 Z")
+            .attr("fill", "#E69F00");
+        }
+        const a = svg.append("g").attr("transform", "translate(80, 80)");      house(a);
+        labelBelow(svg, 80,  140, "translate");
+
+        const b = svg.append("g").attr("transform", "translate(220, 80) rotate(20)"); house(b);
+        labelBelow(svg, 220, 140, "translate + rotate");
+
+        const c = svg.append("g").attr("transform", "translate(380, 80) scale(1.4)"); house(c);
+        labelBelow(svg, 380, 140, "translate + scale");
+
+        const outer = svg.append("g").attr("transform", "translate(500, 60)");
+        const inner = outer.append("g").attr("transform", "translate(40, 20) rotate(-15)");
+        house(inner);
+        labelBelow(svg, 540, 140, "nested groups");
+      }
+
+      // ---------- §10. coordinate system demo ----------
+      // Outer SVG is 360 x 220. We translate the inner content by (60, 40) so
+      // that "(0, 0)" inside the demo is visible, not flush against the corner.
+      const coordsSvg = d3.select("#coords").append("svg")
+        .attr("width", 360).attr("height", 220)
+        .style("background", "#fafafa")
+        .style("border", "1px solid #ddd");
+
+      const defs = coordsSvg.append("defs");
+      defs.append("marker")
+        .attr("id", "arrow")
+        .attr("viewBox", "0 0 10 10")
+        .attr("refX", 8).attr("refY", 5)
+        .attr("markerWidth", 8).attr("markerHeight", 8)
+        .attr("orient", "auto-start-reverse")
+        .append("path")
+        .attr("d", "M 0 0 L 10 5 L 0 10 z")
+        .attr("fill", "#777");
+
+      const coords = coordsSvg.append("g").attr("transform", "translate(60, 40)");
+
+      coords.append("line")
+        .attr("x1", 0).attr("y1", 0).attr("x2", 220).attr("y2", 0)
+        .attr("stroke", "#777").attr("stroke-width", 1.5)
+        .attr("marker-end", "url(#arrow)");
+      coords.append("text").attr("x", 226).attr("y", 4)
+        .style("font-size", "var(--text-md)").attr("fill", "#555").text("x");
+
+      coords.append("line")
+        .attr("x1", 0).attr("y1", 0).attr("x2", 0).attr("y2", 140)
+        .attr("stroke", "#777").attr("stroke-width", 1.5)
+        .attr("marker-end", "url(#arrow)");
+      coords.append("text").attr("x", -4).attr("y", 152)
+        .attr("text-anchor", "end")
+        .style("font-size", "var(--text-md)").attr("fill", "#555").text("y");
+
+      const points = [
+        { cx: 0,   cy: 0,  label: "(0, 0)",   anchor: "start", dx:  10, dy: -10 },
+        { cx: 120, cy: 0,  label: "(120, 0)", anchor: "start", dx:  10, dy: -10 },
+        { cx: 0,   cy: 60, label: "(0, 60)",  anchor: "start", dx:  10, dy:   4 }
+      ];
+      points.forEach(p => {
+        coords.append("circle").attr("cx", p.cx).attr("cy", p.cy).attr("r", 6)
+          .attr("fill", "#0072B2");
+        coords.append("text")
+          .attr("x", p.cx + p.dx).attr("y", p.cy + p.dy)
+          .attr("text-anchor", p.anchor)
+          .style("font-size", "var(--text-md)").attr("fill", "#333")
+          .text(p.label);
+      });
+
+      // ---------- §11. attribute playground ----------
+      const playground = d3.select("#playground").append("svg")
+        .attr("width", 540).attr("height", 300)
+        .style("background", "#fafafa")
+        .style("border", "1px solid #ddd");
+
+      const dot = playground.append("circle")
+        .attr("cx", 240).attr("cy", 120).attr("r", 24)
+        .attr("fill", "#0072B2").attr("opacity", 0.75);
+
+      function wireSlider(id, attr, valueId) {
+        d3.select("#" + id).on("input", function () {
+          const v = +this.value;
+          dot.attr(attr, v);
+          document.getElementById(valueId).textContent = v;
+        });
+      }
+      wireSlider("slider-cx", "cx", "cx-val");
+      wireSlider("slider-cy", "cy", "cy-val");
+      wireSlider("slider-r", "r", "r-val");
+    </script>
+  </body>
+</html>

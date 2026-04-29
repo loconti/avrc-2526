@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>09b — Data-Driven SVG</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="./_shared/chart.js"></script>
+    <link rel="stylesheet" href="./_shared/chart.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/styles/github.min.css">
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/highlight.min.js"></script>
+    <script>document.addEventListener("DOMContentLoaded", () => hljs.highlightAll());</script>
+  </head>
+
+<body>
+    <h1>09b — Data-Driven SVG</h1>
+    <p class="lead">First contact with the D3 data join: from an array of objects to one SVG element per row.
+        We use a small toy dataset and place circles at literal pixel positions — no scales, no axes — so the
+        binding between data and DOM stays in plain sight.</p>
+
+    <h2>1. The dataset</h2>
+    <p>A small array of nine plain JavaScript objects. Each row has an <code>x</code>, a <code>y</code>, and a
+        <code>value</code>. Coordinates are in pixels of the plot area — there is no domain conversion yet
+        (scales and axes are introduced in <code>09c</code>).</p>
+    <pre><code>const dataset = [
+    { x: 100, y:  80, value: 20 },
+    { x: 200, y: 150, value: 15 },
+    { x: 300, y: 100, value: 25 },
+    { x: 400, y: 200, value: 10 },
+    { x: 500, y:  80, value: 30 },
+    { x: 150, y: 250, value: 18 },
+    { x: 250, y: 180, value: 12 },
+    { x: 350, y: 150, value: 22 },
+    { x: 450, y: 120, value: 16 }
+];</code></pre>
+
+    <h2>2. The data join</h2>
+    <p>The data join binds the array of objects to a selection of DOM elements. For each row it creates a
+        <code>&lt;circle&gt;</code> and lets us set attributes from the bound row.</p>
+    <pre><code>svg.selectAll("circle")
+    .data(dataset)
+    .join("circle")
+        .attr("cx",   d =&gt; d.x)
+        .attr("cy",   d =&gt; d.y)
+        .attr("r",    d =&gt; d.value)
+        .attr("fill", "steelblue")
+        .attr("opacity", 0.7);</code></pre>
+    <p>Read the four lines as four steps:</p>
+    <ol>
+        <li><code>selectAll("circle")</code> — start with a selection of all circles inside the SVG (initially
+            empty)</li>
+        <li><code>.data(dataset)</code> — bind the array to that selection</li>
+        <li><code>.join("circle")</code> — make the DOM look like the data: create a
+            <code>&lt;circle&gt;</code> for every row that does not yet have one</li>
+        <li><code>.attr(name, d =&gt; ...)</code> — set each attribute as a function of the bound row
+            <code>d</code>; literal values can also be passed (no function)</li>
+    </ol>
+    <div class="container" id="canvas-2"></div>
+    <p>That is the entire workflow. Every D3 chart we build from now on follows the same shape: select →
+        bind data → join → set attributes from the data.</p>
+
+    <h2>3. The three sub-selections: enter, update, exit</h2>
+    <p>The interesting case is when the data <em>changes</em>. Calling the join a second time with a different
+        array partitions the work into three sub-selections:</p>
+    <ul>
+        <li><strong>enter</strong> — data rows that have no matching DOM element yet, so D3 creates one</li>
+        <li><strong>update</strong> — data rows that already match an existing element, so D3 keeps it (any
+            attributes you set will be refreshed)</li>
+        <li><strong>exit</strong> — DOM elements whose data has disappeared, so D3 removes them</li>
+    </ul>
+    <p>Two datasets, matched by id:</p>
+    <ul>
+        <li>dataset <strong>A</strong>: ids <code>1, 2, 3, 4, 5, 6, 7, 8, 9</code></li>
+        <li>dataset <strong>B</strong>: ids <code>3, 4, 5, 6, 7, 8, 9, 10, 11</code></li>
+    </ul>
+    <p>Going from A to B, ids <code>1, 2</code> exit; ids <code>3–9</code> update; ids <code>10, 11</code> enter.
+        The three rows below all share the same id axis (1 on the left, 11 on the right) so the same id always
+        sits at the same horizontal position. A circle is drawn only where its id belongs to that
+        sub-selection.</p>
+    <p>
+        <button id="cycle">Toggle direction</button>
+        <span id="cycle-state" style="margin-left: 1em; color: #555;">currently showing the join going A → B</span>
+    </p>
+    <p style="font-size: 0.95em; color: #555;">"Going A → B" means: start with dataset A on screen, then call the
+        join with dataset B — the diagram shows what the join did. Click the button to flip the direction
+        (B → A swaps the enter and exit roles).</p>
+    <div id="eue-panels"></div>
+    <p>Each circle is labelled with its id. The story to read off the diagram: <em>"this is what the join just
+            did"</em> — green circles were created, blue circles were kept, orange circles were removed.</p>
+
+    <h2>4. The reactive reshuffle</h2>
+    <p>The same code, run on a constantly-changing dataset. Each click of the button below replaces roughly half
+        the points: D3 adds the new ones, removes the old ones, and keeps the rest. The transitions on enter and
+        exit make the three sub-selections visible as motion.</p>
+    <p>The join can take three callbacks — one per sub-selection — so we can give each its own behaviour.
+        Here, entering circles fade in by growing from <code>r = 0</code>; exiting circles shrink to
+        <code>r = 0</code> before being removed; updates are left untouched.</p>
+    <pre><code>// `points` is the array of currently-shown rows; each row has a stable `id`.
+let points = makePoints(20);
+
+function render() {
+    plot.selectAll("circle")
+        .data(points, d =&gt; d.id)            // key by id, so D3 matches rows to circles
+        .join(
+            enter =&gt; enter.append("circle")
+                .attr("cx", d =&gt; d.x).attr("cy", d =&gt; d.y)
+                .attr("r", 0)                                      // start invisible
+                .attr("fill", "steelblue").attr("opacity", 0.7)
+                .call(en =&gt; en.transition().duration(400)
+                    .attr("r", d =&gt; d.value)),                 // grow into place
+
+            update =&gt; update,                                   // keep as-is
+
+            exit  =&gt; exit.call(ex =&gt; ex.transition().duration(300)
+                    .attr("r", 0).remove())                        // shrink, then remove
+        );
+}
+render();
+
+// On every click, drop ~half the points and add fresh ones, then re-render.
+document.getElementById("reshuffle").addEventListener("click", () =&gt; {
+    const keep = points.filter(() =&gt; Math.random() &gt; 0.5);
+    points = keep.concat(makePoints(20 - keep.length));
+    render();
+});</code></pre>
+    <p>
+        <button id="reshuffle">Reshuffle the data</button>
+        <span id="count" style="margin-left: 1em; color: #555;"></span>
+    </p>
+    <div class="container" id="canvas-3"></div>
+
+    <div class="note"><strong>Takeaway.</strong> A D3 chart is a function from <em>data</em> to a set of DOM
+        elements with attributes. The join keeps the DOM in sync with the data on every update. So far the data
+        has been in pixel coordinates; <code>09c</code> introduces <strong>scales</strong> — the functions that
+        let real data values drive the same join.</div>
+
+    <p class="tutorial-nav"><a href="09a-building-svg-with-d3.html">← 09a — Building SVG with D3</a> ·
+        <a href="index.html">L9 index</a> ·
+        <a href="09c-scales-and-axes.html">09c — Scales and Axes →</a></p>
+
+    <script>
+        const CHART_H = 380;
+
+        const dataset = [
+            { x: 100, y: 80, value: 20 },
+            { x: 200, y: 150, value: 15 },
+            { x: 300, y: 100, value: 25 },
+            { x: 400, y: 200, value: 10 },
+            { x: 500, y: 80, value: 30 },
+            { x: 150, y: 250, value: 18 },
+            { x: 250, y: 180, value: 12 },
+            { x: 350, y: 150, value: 22 },
+            { x: 450, y: 120, value: 16 }
+        ];
+
+        const c2 = makeCanvas("#canvas-2", CHART_H, {
+            showPlotArea: true,
+            margin: { top: 30, right: 30, bottom: 30, left: 30 }
+        });
+        // (cx, cy, r) come straight from the data — no scales yet.
+        // The dataset coordinates are interpreted in the inner-<g> coordinate space.
+        c2.plot.selectAll("circle")
+            .data(dataset)
+            .join("circle")
+            .attr("cx", d => d.x)
+            .attr("cy", d => d.y)
+            .attr("r", d => d.value)
+            .attr("fill", "steelblue")
+            .attr("stroke", "black")
+            .attr("stroke-width", 1)
+            .attr("opacity", 0.7);
+
+        // ---- enter / update / exit decomposition ----
+        //
+        // Layout: a single 11-slot horizontal axis (ids 1..11) shared by all
+        // three rows. The same id always sits at the same x, so the diagram
+        // reads as a literal partition of the universe of ids.
+
+        const idRange = d3.range(1, 12);                  // 1..11, inclusive
+        const idsA    = new Set(d3.range(1, 10));         // ids 1..9
+        const idsB    = new Set(d3.range(3, 12));         // ids 3..11
+
+        // Layout constants — single source of truth.
+        const labelW    = 70;            // left strip for row labels
+        const slotW     = 48;            // horizontal pitch between ids
+        const padR      = 24;            // right padding so the last circle fits
+        const padTop    = 28;            // top padding (id-axis ticks live here)
+        const padBottom = 16;            // bottom padding
+        const rowH      = 70;            // height of each role row
+        const dotR      = 14;            // circle radius
+
+        // Helpers: position of slot `id`, and y-center of row `i`.
+        const slotXL = id => labelW + slotW * (id - 0.5);
+        const rowYM  = i  => padTop + rowH * (i + 0.5);
+
+        // SVG dims: derived, not magic numbers.
+        const eueSvgW = labelW + slotW * idRange.length + padR;       // 70 + 528 + 24 = 622
+        const eueSvgH = padTop + rowH * 3 + padBottom;                // 28 + 210 + 16 = 254
+
+        const eueRoot = d3.select("#eue-panels").append("svg")
+            .attr("width", eueSvgW).attr("height", eueSvgH)
+            .style("background", "#fafafa").style("border", "1px solid #ddd");
+
+        // baseline row backgrounds + empty slot ticks + row labels
+        ["enter", "update", "exit"].forEach((role, i) => {
+            const yMid = rowYM(i);
+            // row label (left strip)
+            eueRoot.append("text")
+                .attr("x", labelW - 14).attr("y", yMid + 5)
+                .attr("text-anchor", "end").style("font-size", "var(--text-lg)")
+                .attr("font-weight", "bold")
+                .attr("fill", role === "enter" ? "#009E73" : role === "update" ? "#0072B2" : "#D55E00")
+                .text(role);
+            // baseline running through all 11 slots
+            eueRoot.append("line")
+                .attr("x1", slotXL(1) - dotR).attr("x2", slotXL(11) + dotR)
+                .attr("y1", yMid).attr("y2", yMid)
+                .attr("stroke", "#e1e4e8").attr("stroke-width", 1);
+            // empty slot ticks for every id
+            idRange.forEach(id => {
+                eueRoot.append("circle")
+                    .attr("cx", slotXL(id)).attr("cy", yMid).attr("r", 3)
+                    .attr("fill", "#d0d4d9");
+            });
+        });
+        // id-axis ticks above row 1
+        idRange.forEach(id => {
+            eueRoot.append("text")
+                .attr("x", slotXL(id)).attr("y", padTop - 8)
+                .attr("text-anchor", "middle")
+                .style("font-size", "var(--text-sm)").attr("fill", "#888")
+                .text(id);
+        });
+
+        function rolesForDirection(dir) {
+            // dir = "AtoB" or "BtoA"
+            const prev = dir === "AtoB" ? idsA : idsB;
+            const next = dir === "AtoB" ? idsB : idsA;
+            const result = { enter: [], update: [], exit: [] };
+            idRange.forEach(id => {
+                const inPrev = prev.has(id), inNext = next.has(id);
+                if (inNext && !inPrev) result.enter.push(id);
+                else if (inNext && inPrev) result.update.push(id);
+                else if (!inNext && inPrev) result.exit.push(id);
+            });
+            return result;
+        }
+
+        const roleColor = { enter: "#009E73", update: "#0072B2", exit: "#D55E00" };
+        let dir = "AtoB";
+
+        function renderEUE() {
+            const roles = rolesForDirection(dir);
+            ["enter", "update", "exit"].forEach((role, i) => {
+                const yMid = rowYM(i);
+                eueRoot.selectAll(`circle.eue-${role}`)
+                    .data(roles[role], id => id)
+                    .join("circle")
+                    .attr("class", `eue-${role}`)
+                    .attr("cx", id => slotXL(id))
+                    .attr("cy", yMid)
+                    .attr("r", dotR)
+                    .attr("fill", roleColor[role])
+                    .attr("opacity", 0.85);
+                eueRoot.selectAll(`text.eue-${role}`)
+                    .data(roles[role], id => id)
+                    .join("text")
+                    .attr("class", `eue-${role}`)
+                    .attr("x", id => slotXL(id))
+                    .attr("y", yMid + 4)
+                    .attr("text-anchor", "middle")
+                    .attr("fill", "white").style("font-size", "var(--text-md)").attr("font-weight", "bold")
+                    .text(id => id);
+            });
+            const fromTo = dir === "AtoB" ? "A → B" : "B → A";
+            document.getElementById("cycle-state").textContent =
+                `currently showing the join going ${fromTo}`;
+        }
+
+        renderEUE();
+        document.getElementById("cycle").addEventListener("click", () => {
+            dir = dir === "AtoB" ? "BtoA" : "AtoB";
+            renderEUE();
+        });
+
+        // ---- canvas 3: reactive join ----
+        const c3 = makeCanvas("#canvas-3", CHART_H, {
+            showPlotArea: true,
+            margin: { top: 30, right: 30, bottom: 30, left: 30 }
+        });
+        const countEl = document.getElementById("count");
+
+        function makePoints(n) {
+            // Pad the random range by the max possible radius (27 = 5 + 22)
+            // so circles never overflow the inner plot area.
+            const maxR = 30;
+            return d3.range(n).map(() => ({
+                id: Math.random(),
+                x: maxR + Math.random() * (c3.innerW - 2 * maxR),
+                y: maxR + Math.random() * (c3.innerH - 2 * maxR),
+                value: 5 + Math.random() * 22
+            }));
+        }
+
+        let points = makePoints(20);
+        function render() {
+            c3.plot.selectAll("circle")
+                .data(points, d => d.id)
+                .join(
+                    enter => enter.append("circle")
+                        .attr("cx", d => d.x).attr("cy", d => d.y)
+                        .attr("r", 0)
+                        .attr("fill", "steelblue")
+                        .attr("stroke", "black").attr("stroke-width", 1)
+                        .attr("opacity", 0.7)
+                        .call(en => en.transition().duration(400).attr("r", d => d.value)),
+                    update => update,
+                    exit => exit.call(ex => ex.transition().duration(300).attr("r", 0).remove())
+                );
+            countEl.textContent = `${points.length} circles on the canvas`;
+        }
+        render();
+
+        document.getElementById("reshuffle").addEventListener("click", () => {
+            const keep = points.filter(() => Math.random() > 0.5);
+            points = keep.concat(makePoints(20 - keep.length));
+            render();
+        });
+    </script>
+</body>
+
+</html>

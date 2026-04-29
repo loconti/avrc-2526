@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>DV09 — Introduction to D3.js</title>
+    <link rel="stylesheet" href="./_shared/chart.css">
+</head>
+
+<body>
+    <h1>DV09 — Introduction to D3.js</h1>
+
+    <h2>What you should already know</h2>
+    <p>The tutorials assume:</p>
+    <ul>
+        <li>basic HTML — what an element, an attribute, and a class are</li>
+        <li>basic JavaScript — variables, arrow functions, arrays, objects, <code>const</code> /
+            <code>let</code></li>
+        <li>how to open a file in a web browser</li>
+    </ul>
+    <p>No prior D3, no prior visualization library experience required.</p>
+
+    <h2>Tutorials</h2>
+    <p>Run them in order — each one builds on the previous.</p>
+    <ol>
+        <li><a href="09a-building-svg-with-d3.html"><strong>09a — Building SVG with D3</strong></a><br>
+            HTML scaffolding, the <code>select</code> · <code>append</code> · <code>attr</code> · <code>style</code>
+            chain, the SVG element catalog (<code>rect</code>, <code>circle</code>, <code>line</code>,
+            <code>path</code>, <code>text</code>, <code>g</code>), the SVG coordinate system, and a live attribute
+            playground. No data yet.
+        </li>
+        <li><a href="09b-data-driven-svg.html"><strong>09b — Data-Driven SVG</strong></a><br>
+            The data join: <code>selectAll</code> · <code>data</code> · <code>join</code>. Toy
+            <code>{x, y, value}</code> dataset placed at literal pixel coordinates (no scales). Explicit
+            visualisation of the <strong>enter / update / exit</strong> sub-selections, plus a reactive reshuffle
+            demo.
+        </li>
+        <li><a href="09c-scales-and-axes.html"><strong>09c — Scales and Axes</strong></a><br>
+            D3 scales (<code>scaleLinear</code>, <code>scaleLog</code>, <code>scaleBand</code>) on the same dataset
+            with a radio toggle between scatter and bar chart. Margin convention. Axes via <code>d3.axisBottom</code>
+            and <code>d3.axisLeft</code>. Same skeleton applied to a Gapminder slice.
+        </li>
+        <li><a href="09d-loading-data.html"><strong>09d — Loading Data and D3 Helpers</strong></a><br>
+            <code>d3.csv</code> with and without an accessor (string vs number coercion). Helpers
+            (<code>d3.extent</code>, <code>d3.min</code>, <code>d3.max</code>, <code>d3.mean</code>,
+            <code>d3.group</code>, <code>d3.rollup</code>). Formatters (<code>d3.format</code>,
+            <code>d3.timeFormat</code>).
+        </li>
+        <li><a href="09e-first-scatterplot.html"><strong>09e — First Scatterplot</strong></a><br>
+            Capstone: full Gapminder scatterplot end-to-end using everything from the previous tutorials. GDP per
+            capita on a log axis, life expectancy on the y-axis, size by population, color by continent. Legend and
+            tooltips.
+        </li>
+    </ol>
+
+    <h2>Setup</h2>
+    <p>The tutorials are plain HTML files and self-contained — every asset they need
+        (<code>_shared/chart.css</code>, <code>_shared/chart.js</code>, <code>datasets/gapminder.csv</code>) is
+        inside this folder. Serve them with a local HTTP server:</p>
+    <pre><code>cd 09-d3js-intro
+python -m http.server 8000
+# open http://localhost:8000/</code></pre>
+    <p>D3 is loaded from the CDN (<code>https://d3js.org/d3.v7.min.js</code>); no installation required.</p>
+
+    <h2>Coverage check (DV09 deck → tutorials)</h2>
+    <table>
+        <thead><tr><th>Concept</th><th>Practiced in</th></tr></thead>
+        <tbody>
+            <tr><td>HTML, CSS, JS, the DOM</td><td>09a</td></tr>
+            <tr><td><code>d3.select</code>, <code>append</code>, <code>attr</code>, <code>style</code></td><td>09a</td></tr>
+            <tr><td>SVG element catalog (rect, circle, line, path, text, g)</td><td>09a</td></tr>
+            <tr><td>SVG coordinate system (top-left origin, y down)</td><td>09a</td></tr>
+            <tr><td>Data join: <code>selectAll</code>, <code>data</code>, <code>join</code></td><td>09b</td></tr>
+            <tr><td>Enter / update / exit sub-selections</td><td>09b</td></tr>
+            <tr><td>Scales (linear, log, band)</td><td>09c</td></tr>
+            <tr><td>Margin convention</td><td>09b, 09c, 09e</td></tr>
+            <tr><td>Axes (<code>axisBottom</code>, <code>axisLeft</code>)</td><td>09c, 09e</td></tr>
+            <tr><td><code>d3.csv</code> with accessor</td><td>09d, 09e</td></tr>
+            <tr><td>Helpers: <code>min</code> / <code>max</code> / <code>extent</code> / <code>mean</code> /
+                <code>group</code> / <code>rollup</code></td><td>09d</td></tr>
+            <tr><td>Formatters: <code>d3.format</code>, <code>d3.timeFormat</code></td><td>09d</td></tr>
+            <tr><td>Full scatterplot with size + color encoding</td><td>09e</td></tr>
+        </tbody>
+    </table>
+
+    <h2>References</h2>
+    <ul>
+        <li><a href="https://alignedleft.com/tutorials/d3" target="_blank">Murray — <em>Interactive Data
+                    Visualization for the Web</em></a> (free online, chapters 1–6)</li>
+        <li><a href="https://bost.ocks.org/mike/join/" target="_blank">Bostock — "Thinking with Joins"</a></li>
+        <li><a href="https://d3js.org" target="_blank">d3js.org</a> — official documentation</li>
+        <li><a href="https://observablehq.com/@d3" target="_blank">Observable D3 collection</a></li>
+    </ul>
+</body>
+
+</html>
