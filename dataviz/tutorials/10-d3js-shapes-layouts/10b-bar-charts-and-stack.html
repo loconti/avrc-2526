@@ -226,7 +226,7 @@ const y = d3.scaleLinear().domain([0, yMax]).nice().range([innerH, 0]);</code></
 
                 // label
                 c.plot.append("text").attr("x", 0).attr("y", yOff + 14)
-                    .style("font-size", "12px").attr("fill", "#666")
+                    .style("font-size", "var(--text-sm)").attr("fill", "#666")
                     .text(`padding(${pad})`);
 
                 // bars at this row
@@ -280,7 +280,7 @@ const y = d3.scaleLinear().domain([0, yMax]).nice().range([innerH, 0]);</code></
                 const item = legend.append("g").attr("transform", `translate(0, ${i * 18})`);
                 item.append("rect").attr("width", 12).attr("height", 12).attr("fill", color(k));
                 item.append("text").attr("x", 18).attr("y", 10)
-                    .style("font-size", "12px").attr("fill", "#333").text(k);
+                    .style("font-size", "var(--text-sm)").attr("fill", "#333").text(k);
             });
         }
     </script>

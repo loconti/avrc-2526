@@ -155,7 +155,7 @@ svg.append("path")
                 .attr("d", "M 20 120 L 100 40 L 180 90 Z")
                 .attr("fill", "#0072B2");
             c.plot.append("text").attr("x", 0).attr("y", -8)
-                .style("font-size", "13px").attr("fill", "#666")
+                .style("font-size", "var(--text-md)").attr("fill", "#666")
                 .text('d = "M 20 120 L 100 40 L 180 90 Z"');
         }
 
@@ -196,12 +196,12 @@ svg.append("path")
             const halfW = c.innerW / 3;
             const cellH = c.innerH / 2;
             const variants = [
-                { name: "curveLinear",      c: d3.curveLinear,      color: "#0072B2", row: 0, col: 0 },
-                { name: "curveStep",        c: d3.curveStep,        color: "#D55E00", row: 0, col: 1 },
-                { name: "curveStepAfter",   c: d3.curveStepAfter,   color: "#009E73", row: 0, col: 2 },
-                { name: "curveMonotoneX",   c: d3.curveMonotoneX,   color: "#CC79A7", row: 1, col: 0 },
-                { name: "curveCatmullRom",  c: d3.curveCatmullRom,  color: "#E69F00", row: 1, col: 1 },
-                { name: "curveBasis",       c: d3.curveBasis,       color: "#7F3C8D", row: 1, col: 2 }
+                { name: "curveLinear",      curve: d3.curveLinear,      color: "#0072B2", row: 0, col: 0 },
+                { name: "curveStep",        curve: d3.curveStep,        color: "#D55E00", row: 0, col: 1 },
+                { name: "curveStepAfter",   curve: d3.curveStepAfter,   color: "#009E73", row: 0, col: 2 },
+                { name: "curveMonotoneX",   curve: d3.curveMonotoneX,   color: "#CC79A7", row: 1, col: 0 },
+                { name: "curveCatmullRom",  curve: d3.curveCatmullRom,  color: "#E69F00", row: 1, col: 1 },
+                { name: "curveBasis",       curve: d3.curveBasis,       color: "#7F3C8D", row: 1, col: 2 }
             ];
             const x = d3.scaleLinear().domain(d3.extent(series, d => d.year)).range([8, halfW - 8]);
             const y = d3.scaleLinear().domain([0, d3.max(series, d => d.value)]).range([cellH - 18, 8]);
@@ -213,9 +213,9 @@ svg.append("path")
                     .attr("width", halfW - 4).attr("height", cellH - 4)
                     .attr("fill", "none").attr("stroke", "#eee");
                 cell.append("text").attr("x", 8).attr("y", 16)
-                    .style("font-size", "12px").attr("fill", "#444").attr("font-weight", "600")
+                    .style("font-size", "var(--text-sm)").attr("fill", "#444").attr("font-weight", "600")
                     .text(v.name);
-                const line = d3.line().x(d => x(d.year)).y(d => y(d.value)).curve(v.c);
+                const line = d3.line().x(d => x(d.year)).y(d => y(d.value)).curve(v.curve);
                 cell.append("path")
                     .datum(series).attr("d", line)
                     .attr("fill", "none").attr("stroke", v.color).attr("stroke-width", 2);

@@ -92,6 +92,9 @@ sel.enter()                                   // 2. create new
             <input type="radio" name="join-mode" value="key" checked> key join
         </label>
     </p>
+    <p style="font-size: 0.95em; color: #555;">Try this: <strong>shuffle once with the default
+        (key join)</strong>, then switch to <em>index join</em> and shuffle again. Watch what happens to
+        each circle's colour and label.</p>
     <div class="container" id="demo-keys"></div>
 
     <h2>6. Custom join behaviour — three callbacks</h2>
@@ -214,7 +217,7 @@ sel.enter()                                   // 2. create new
                         .attr("x", d => slotW * (d.id - 0.5))
                         .attr("y", yC + 4)
                         .attr("text-anchor", "middle")
-                        .style("font-size", "12px").style("font-weight", "bold")
+                        .style("font-size", "var(--text-sm)").style("font-weight", "bold")
                         .attr("fill", "white").attr("opacity", 0)
                         .text(d => d.id)
                         .call(en => en.transition().duration(400).attr("opacity", 1)),

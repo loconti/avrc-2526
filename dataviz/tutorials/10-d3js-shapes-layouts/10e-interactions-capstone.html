@@ -23,6 +23,10 @@
             opacity: 0;
             transition: opacity 0.15s;
         }
+        .capstone-hint    { color: #555; font-size: 0.95em; margin-top: 1em; }
+        .capstone-controls { margin-top: 0.5em; }
+        .capstone-year    { display: inline-block; min-width: 8em; }
+        #year             { width: 320px; vertical-align: middle; }
     </style>
 </head>
 
@@ -129,9 +133,14 @@ yearSlider.on("input", function () {
         <li><strong>Click</strong> a continent in the legend to filter (click again to clear).</li>
         <li><strong>Drag</strong> the slider to change the year.</li>
     </ul>
-    <p style="margin-top: 1em;">
-        <label style="display: inline-block; min-width: 8em;">Year: <span id="year-display">2007</span></label>
-        <input type="range" id="year" min="1952" max="2007" step="5" value="2007" style="width: 320px; vertical-align: middle;">
+    <p class="capstone-hint">
+        <strong>Hover</strong> a circle to see country details ·
+        <strong>click</strong> a continent in the legend to filter ·
+        <strong>drag</strong> the slider to change the year.
+    </p>
+    <p class="capstone-controls">
+        <label class="capstone-year">Year: <span id="year-display">2007</span></label>
+        <input type="range" id="year" min="1952" max="2007" step="5" value="2007">
     </p>
     <div class="container" id="chart"></div>
     <div id="tooltip"></div>
@@ -215,7 +224,7 @@ yearSlider.on("input", function () {
 
         legend.append("text")
             .attr("y", continents.length * 22 + 30)
-            .style("font-size", "11px").attr("fill", "#888")
+            .style("font-size", "var(--text-sm)").attr("fill", "#888")
             .text("(click to filter)");
 
         d3.csv("./datasets/gapminder.csv", d => ({
