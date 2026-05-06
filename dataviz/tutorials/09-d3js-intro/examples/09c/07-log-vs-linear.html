@@ -31,22 +31,27 @@
         }
 
         const data = [10, 30, 100, 300, 1000, 3000, 10000, 30000];
-        const probeInnerW = 700 - 50 - 30;
 
-        function row(selector, scale, label, color) {
+        // Build the scale INSIDE the helper using the canvas's actual innerW.
+        // makeCanvas measures the container's width, so the right value is
+        // only known after the canvas is created.
+        function row(selector, makeScale, label, color) {
             const c = makeCanvas(selector, 110);
             caption(c.plot, label, color);
-            c.plot.append("g").attr("transform", `translate(0, ${c.innerH})`)
+            const scale = makeScale(c.innerW);
+            c.plot.append("g")
+                .attr("transform", `translate(0, ${c.innerH})`)
                 .call(d3.axisBottom(scale).ticks(6, "~s"));
             c.plot.selectAll("circle").data(data).join("circle")
-                .attr("cx", d => scale(d)).attr("cy", c.innerH / 2)
-                .attr("r", 6).attr("fill", color).attr("opacity", 0.85);
+                .attr("cx", d => scale(d))
+                .attr("cy", c.innerH / 2)
+                .attr("r", 7).attr("fill", color).attr("opacity", 0.85);
         }
         row("#lin",
-            d3.scaleLinear().domain(d3.extent(data)).range([0, probeInnerW]),
+            innerW => d3.scaleLinear().domain(d3.extent(data)).range([0, innerW]),
             "scaleLinear  — small values bunch up at the left", "#D55E00");
         row("#log",
-            d3.scaleLog().domain(d3.extent(data)).range([0, probeInnerW]),
+            innerW => d3.scaleLog().domain(d3.extent(data)).range([0, innerW]),
             "scaleLog  — each tick is one order of magnitude", "#0072B2");
     </script>
 </body>

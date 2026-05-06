@@ -432,10 +432,13 @@ svg.append("path")
         // 4. Margin convention — without vs with
         // ============================================================
         {
+            // Use the container's own width so the no-margin demo matches the
+            // with-margin demo below it visually.
+            const W = Math.floor(document.querySelector("#demo-no-margin").getBoundingClientRect().width) || 700;
             const root = d3.select("#demo-no-margin").append("svg")
-                .attr("width", CANVAS.width).attr("height", 30)
+                .attr("width", W).attr("height", 30)
                 .style("background", "#fafafa").style("border", "1px solid #ddd");
-            const x = d3.scaleLinear().domain([0, 50000]).range([0, CANVAS.width]);
+            const x = d3.scaleLinear().domain([0, 50000]).range([0, W]);
             root.append("g").attr("transform", "translate(0, 0)")
                 .call(d3.axisTop(x).ticks(6, "~s"));
         }
@@ -475,27 +478,30 @@ svg.append("path")
         // 6a. Linear vs log on the same data
         // ============================================================
         const dataLog = [10, 30, 100, 300, 1000, 3000, 10000, 30000];
-        function renderAxisRow(selector, scale, label, color) {
+        // Build the scale INSIDE the helper using the canvas's actual innerW —
+        // makeCanvas measures the container element, so the right value is only
+        // known after the canvas is created.
+        function renderAxisRow(selector, makeScale, label, color) {
             const c = makeCanvas(selector, 110);
             caption(c.plot, label, color);
+            const scale = makeScale(c.innerW);
             c.plot.append("g")
                 .attr("transform", `translate(0, ${c.innerH})`)
                 .call(d3.axisBottom(scale).ticks(6, "~s"));
             c.plot.selectAll("circle").data(dataLog).join("circle")
                 .attr("cx", d => scale(d))
                 .attr("cy", c.innerH / 2)
-                .attr("r", 6).attr("fill", color === "#D55E00" ? "#D55E00" : "#0072B2")
+                .attr("r", 7).attr("fill", color)
                 .attr("opacity", 0.85);
         }
-        const probeInnerW = CANVAS.width - CANVAS.margin.left - CANVAS.margin.right;
         renderAxisRow(
             "#demo-log-linear",
-            d3.scaleLinear().domain(d3.extent(dataLog)).range([0, probeInnerW]),
+            innerW => d3.scaleLinear().domain(d3.extent(dataLog)).range([0, innerW]),
             "scaleLinear  — small values bunch up at the left",
             "#D55E00");
         renderAxisRow(
             "#demo-log-log",
-            d3.scaleLog().domain(d3.extent(dataLog)).range([0, probeInnerW]),
+            innerW => d3.scaleLog().domain(d3.extent(dataLog)).range([0, innerW]),
             "scaleLog  — each tick is one order of magnitude, points evenly spaced",
             "#0072B2");
 

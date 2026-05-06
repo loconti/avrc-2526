@@ -31,20 +31,31 @@
     </p>
     <div id="with-margin"></div>
     <script>
-        // 4a. NO margins
+        // 4a. NO margins — measure the container's own width so the SVG fills
+        //     the same horizontal space as the with-margins demo below.
         {
-            const root = d3.select("#no-margin").append("svg")
-                .attr("width", 700).attr("height", 30).attr("viewBox", `0 0 ${700} ${30}`).attr("preserveAspectRatio", "xMidYMid meet")
-                .style("background", "#fafafa").style("border", "1px solid #ddd");
-            const x = d3.scaleLinear().domain([0, 50000]).range([0, 700]);
-            root.append("g").attr("transform", "translate(0, 0)")
-                .call(d3.axisTop(x).ticks(6, "~s"));
+            const W = Math.floor(document.querySelector("#no-margin").getBoundingClientRect().width) || 700;
+            const root = d3.select("#no-margin")
+                .append("svg")
+                    .attr("width", W)
+                    .attr("height", 30)
+                    .attr("viewBox", `0 0 ${W} 30`)
+                    .attr("preserveAspectRatio", "xMidYMid meet")
+                    .style("background", "#fafafa")
+                    .style("border", "1px solid #ddd");
+            const x = d3.scaleLinear().domain([0, 50000]).range([0, W]);
+            root.append("g")
+                .attr("transform", "translate(0, 0)")
+                .call(d3.axisTop(x).ticks(6, "~s"));   // ticks render above y=0 → clipped
         }
-        // 4b. With margins
+
+        // 4b. With margins — makeCanvas pads the SVG and shifts the inner <g>
+        //     so axis labels have room to render.
         {
             const c = makeCanvas("#with-margin", 80);
             const x = d3.scaleLinear().domain([0, 50000]).range([0, c.innerW]);
-            c.plot.append("g").attr("transform", `translate(0, ${c.innerH})`)
+            c.plot.append("g")
+                .attr("transform", `translate(0, ${c.innerH})`)
                 .call(d3.axisBottom(x).ticks(6, "~s"));
         }
     </script>
