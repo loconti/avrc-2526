@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>09a — &lt;path&gt;</title>
+    <style>
+      h1 { font-size: 1.4em; margin-bottom: 0.3em; }
+      .lead { color: #555; margin-top: 0; }
+      .lead a { color: #0072B2; }
+        body { max-width: 1100px; margin: 2em auto; padding: 0 1.5em;
+             line-height: 1.55; color: #222; font-size: 16px;
+             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        svg { width: 100%; height: auto; max-width: 100%; display: block;
+             border: 1px solid #ddd; background: white; }
+        .axis text { font-size: 13px; fill: #555; }
+        .axis path, .axis line { stroke: #bbb; }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <h1>09a §7 — &lt;path&gt;</h1>
+    <p class="lead">Three shapes built from the <code>d</code> string mini-language: triangle (M-L-L-Z), arrow, and a quadratic curve. <a href="../../09a-building-svg-with-d3.html">Source tutorial &rarr;</a></p>
+
+    <div id="demo"></div>
+    <script>
+        const svg = d3.select("#demo").append("svg")
+            .attr("width", 600).attr("height", 160).attr("viewBox", `0 0 ${600} ${160}`).attr("preserveAspectRatio", "xMidYMid meet")
+            .style("background", "#fafafa").style("border", "1px solid #ddd");
+
+        svg.append("path")
+            .attr("d", "M 60 110 L 100 30 L 140 110 Z")
+            .attr("fill", "#0072B2");
+        svg.append("text").attr("x", 100).attr("y", 132).attr("text-anchor", "middle")
+            .style("font-size", "12px").attr("fill", "#666").text("triangle (M-L-L-Z)");
+
+        svg.append("path")
+            .attr("d", "M 220 50 L 280 50 L 280 30 L 320 70 L 280 110 L 280 90 L 220 90 Z")
+            .attr("fill", "#E69F00");
+        svg.append("text").attr("x", 270).attr("y", 132).attr("text-anchor", "middle")
+            .style("font-size", "12px").attr("fill", "#666").text("arrow");
+
+        svg.append("path")
+            .attr("d", "M 380 90 Q 460 10, 540 90")
+            .attr("fill", "none").attr("stroke", "#009E73").attr("stroke-width", 3);
+        svg.append("text").attr("x", 460).attr("y", 132).attr("text-anchor", "middle")
+            .style("font-size", "12px").attr("fill", "#666").text("curve (Q)");
+    </script>
+</body>
+</html>

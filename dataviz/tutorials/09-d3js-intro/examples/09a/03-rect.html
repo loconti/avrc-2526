@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>09a — &lt;rect&gt;</title>
+    <style>
+      h1 { font-size: 1.4em; margin-bottom: 0.3em; }
+      .lead { color: #555; margin-top: 0; }
+      .lead a { color: #0072B2; }
+      body { max-width: 1100px; margin: 2em auto; padding: 0 1.5em;
+             line-height: 1.55; color: #222; font-size: 16px;
+             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+      svg { width: 100%; height: auto; max-width: 100%; display: block;
+             border: 1px solid #ddd; background: white; }
+      .axis text {
+        font-size: 13px;
+        fill: #555;
+      }
+      .axis path,
+      .axis line {
+        stroke: #bbb;
+      }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+  </head>
+  <body>
+    <h1>09a §4 — &lt;rect&gt;</h1>
+    <p class="lead">Five rectangles showing the attributes you can change: basic fill, thick stroke, dashed outline, rounded corners, and translucent fill. <a href="../../09a-building-svg-with-d3.html">Source tutorial &rarr;</a></p>
+
+    <div id="demo"></div>
+    <script>
+      const svg = d3
+        .select("#demo")
+        .append("svg")
+        .attr("width", 600)
+        .attr("height", 140).attr("viewBox", `0 0 ${600} ${140}`).attr("preserveAspectRatio", "xMidYMid meet")
+        .style("background", "#fafafa")
+        .style("border", "1px solid #ddd");
+      const W = 80,
+        H = 60,
+        Y = 24;
+      const slot = (i) => 30 + i * 120;
+
+      // basic
+      svg
+        .append("rect")
+        .attr("x", slot(0))
+        .attr("y", Y)
+        .attr("width", W)
+        .attr("height", H)
+        .attr("fill", "#0072B2");
+
+      // thick stroke
+      svg
+        .append("rect")
+        .attr("x", slot(1))
+        .attr("y", Y)
+        .attr("width", W)
+        .attr("height", H)
+        .attr("fill", "#0072B2")
+        .attr("stroke", "#1a1a1a")
+        .attr("stroke-width", 4);
+
+      // dashed stroke (no fill)
+      svg
+        .append("rect")
+        .attr("x", slot(2))
+        .attr("y", Y)
+        .attr("width", W)
+        .attr("height", H)
+        .attr("fill", "none")
+        .attr("stroke", "#0072B2")
+        .attr("stroke-width", 2)
+        .attr("stroke-dasharray", "6,4");
+
+      // rounded corners
+      svg
+        .append("rect")
+        .attr("x", slot(3))
+        .attr("y", Y)
+        .attr("width", W)
+        .attr("height", H)
+        .attr("rx", 12)
+        .attr("ry", 12)
+        .attr("fill", "#0072B2");
+
+      // semi-transparent
+      svg
+        .append("rect")
+        .attr("x", slot(4))
+        .attr("y", Y)
+        .attr("width", W)
+        .attr("height", H)
+        .attr("fill", "#0072B2")
+        .attr("opacity", 0.35);
+
+      // labels
+      ["basic", "stroke", "dashed", "rounded", "translucent"].forEach(
+        (t, i) => {
+          svg
+            .append("text")
+            .attr("x", slot(i) + W / 2)
+            .attr("y", Y + H + 22)
+            .attr("text-anchor", "middle")
+            .style("font-size", "12px")
+            .attr("fill", "#666")
+            .text(t);
+        },
+      );
+    </script>
+  </body>
+</html>

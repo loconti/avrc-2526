@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>09c — .nice() comparison</title>
+    <style>
+      h1 { font-size: 1.4em; margin-bottom: 0.3em; }
+      .lead { color: #555; margin-top: 0; }
+      .lead a { color: #0072B2; }
+        body { max-width: 1100px; margin: 2em auto; padding: 0 1.5em;
+             line-height: 1.55; color: #222; font-size: 16px;
+             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        svg { width: 100%; height: auto; max-width: 100%; display: block;
+             border: 1px solid #ddd; background: white; }
+        .axis text { font-size: 13px; fill: #555; }
+        .axis path, .axis line { stroke: #bbb; }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="../_shared/utils.js"></script>
+</head>
+<body>
+    <h1>09c §2 — .nice() comparison</h1>
+    <p class="lead">Same data, two scales: one with the raw extent, one with <code>.nice()</code> rounding the domain to friendlier numbers. <a href="../../09c-scales-and-axes.html">Source tutorial &rarr;</a></p>
+
+    <div id="raw"></div>
+    <div id="nice"></div>
+    <script>
+        function caption(plot, text, color = "#666") {
+            return plot.append("text").attr("x", 0).attr("y", -8)
+                .style("font-size", "12px").style("fill", color).text(text);
+        }
+
+        const niceData = [123, 487, 1742, 9800, 24371, 49217];
+
+        {
+            const c = makeCanvas("#raw", 90);
+            caption(c.plot, "without .nice()  — domain follows the raw data extent", "#D55E00");
+            const x = d3.scaleLinear().domain(d3.extent(niceData)).range([0, c.innerW]);
+            c.plot.append("g").attr("transform", `translate(0, ${c.innerH})`)
+                .call(d3.axisBottom(x).ticks(6));
+        }
+        {
+            const c = makeCanvas("#nice", 90);
+            caption(c.plot, "with .nice()  — domain rounded to friendly numbers", "#009E73");
+            const x = d3.scaleLinear().domain(d3.extent(niceData)).nice().range([0, c.innerW]);
+            c.plot.append("g").attr("transform", `translate(0, ${c.innerH})`)
+                .call(d3.axisBottom(x).ticks(6));
+        }
+    </script>
+</body>
+</html>

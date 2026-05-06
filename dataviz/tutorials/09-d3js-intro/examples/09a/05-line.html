@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>09a — &lt;line&gt;</title>
+    <style>
+      h1 { font-size: 1.4em; margin-bottom: 0.3em; }
+      .lead { color: #555; margin-top: 0; }
+      .lead a { color: #0072B2; }
+        body { max-width: 1100px; margin: 2em auto; padding: 0 1.5em;
+             line-height: 1.55; color: #222; font-size: 16px;
+             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        svg { width: 100%; height: auto; max-width: 100%; display: block;
+             border: 1px solid #ddd; background: white; }
+        .axis text { font-size: 13px; fill: #555; }
+        .axis path, .axis line { stroke: #bbb; }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <h1>09a §6 — &lt;line&gt;</h1>
+    <p class="lead">Four line variants: thin, thick, dashed, and rounded caps. Lines have no fill — only stroke attributes apply. <a href="../../09a-building-svg-with-d3.html">Source tutorial &rarr;</a></p>
+
+    <div id="demo"></div>
+    <script>
+        const svg = d3.select("#demo").append("svg")
+            .attr("width", 600).attr("height", 140).attr("viewBox", `0 0 ${600} ${140}`).attr("preserveAspectRatio", "xMidYMid meet")
+            .style("background", "#fafafa").style("border", "1px solid #ddd");
+        const Y = 60;
+
+        svg.append("line").attr("x1", 30).attr("y1", Y).attr("x2", 130).attr("y2", Y)
+            .attr("stroke", "#1a1a1a");
+        svg.append("text").attr("x", 80).attr("y", 100).attr("text-anchor", "middle")
+            .style("font-size", "12px").attr("fill", "#666").text("thin");
+
+        svg.append("line").attr("x1", 170).attr("y1", Y).attr("x2", 270).attr("y2", Y)
+            .attr("stroke", "#1a1a1a").attr("stroke-width", 6);
+        svg.append("text").attr("x", 220).attr("y", 100).attr("text-anchor", "middle")
+            .style("font-size", "12px").attr("fill", "#666").text("thick");
+
+        svg.append("line").attr("x1", 310).attr("y1", Y).attr("x2", 410).attr("y2", Y)
+            .attr("stroke", "#1a1a1a").attr("stroke-width", 2)
+            .attr("stroke-dasharray", "6,4");
+        svg.append("text").attr("x", 360).attr("y", 100).attr("text-anchor", "middle")
+            .style("font-size", "12px").attr("fill", "#666").text("dashed");
+
+        svg.append("line").attr("x1", 450).attr("y1", Y).attr("x2", 550).attr("y2", Y)
+            .attr("stroke", "#0072B2").attr("stroke-width", 10)
+            .attr("stroke-linecap", "round");
+        svg.append("text").attr("x", 500).attr("y", 100).attr("text-anchor", "middle")
+            .style("font-size", "12px").attr("fill", "#666").text("round caps");
+    </script>
+</body>
+</html>

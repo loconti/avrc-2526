@@ -3,9 +3,9 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>09c — Scales and Axes</title>
+    <title>09c — Scales, Axes, and Shape Generators</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="./_shared/chart.js"></script>
+    <script src="./_shared/chart.js?v=3"></script>
     <link rel="stylesheet" href="./_shared/chart.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/styles/github.min.css">
     <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/highlight.min.js"></script>
@@ -13,10 +13,30 @@
   </head>
 
 <body>
-    <h1>09c — Scales and Axes</h1>
+    <h1>09c — Scales, Axes, and Shape Generators</h1>
     <p class="lead"><strong>Scales</strong> turn raw data values into visual values (pixel positions, radii,
-        colors). <strong>Axes</strong> are the visible record of that mapping. Together they are the most
-        important concept in D3 after the data join — every chart depends on getting them right.</p>
+        colors). <strong>Axes</strong> are the visible record of that mapping. <strong>Shape
+        generators</strong> (<code>d3.line</code>, <code>d3.area</code>) consume scales pixel-by-pixel and
+        emit the SVG <code>d</code> string for line and area charts. All three together cover the
+        full <em>data → pixel</em> pipeline.</p>
+
+    <h2>How this tutorial is organised</h2>
+    <p>Four blocks, in order:</p>
+    <ol>
+        <li><strong>Why scales, and the basic linear scale</strong> (§1-§2). What goes wrong
+            without one, then <code>scaleLinear</code> with an interactive domain demo and the
+            <code>.nice()</code> / <code>.clamp()</code> helpers.</li>
+        <li><strong>Axes and the chart skeleton</strong> (§3-§5). <code>d3.axisBottom</code>
+            configurations, the margin convention that gives axis labels room to breathe, and what
+            changes when you go from one scale to two (the inverted y-range).</li>
+        <li><strong>Picking the right scale type</strong> (§6-§7). <code>scaleLog</code>,
+            <code>scaleSqrt</code>, <code>scaleBand</code>, <code>scaleOrdinal</code> — when each
+            one is the right tool, with side-by-side comparisons.</li>
+        <li><strong>From scales to shapes</strong> (§8-§12). <code>d3.line</code>, the
+            <code>.datum()</code> vs <code>.data()</code> distinction, curves as a design choice,
+            <code>d3.area</code>, and a ridgeline composition that reuses one area generator
+            across many groups.</li>
+    </ol>
 
     <h2>1. Why we need scales at all</h2>
     <p>Suppose we have nine data points with values from 0 to 50 000:</p>
@@ -170,7 +190,89 @@ color("B");            // → "#E69F00"</code></pre>
     </p>
     <div class="container" id="demo-toggle"></div>
 
-    <h2>8. Quick reference</h2>
+    <h2>8. From scales to shapes — <code>d3.line</code></h2>
+    <p>A line chart is a single <code>&lt;path&gt;</code> whose <code>d</code> attribute traces a polyline
+        through every data point. Writing that string by hand for hundreds of points would be tedious;
+        <code>d3.line()</code> is a generator that does it for you, applying scales pixel-by-pixel:</p>
+    <pre><code>const line = d3.line()
+    .x(d =&gt; xScale(d.year))         // ← scale from §2 reused here
+    .y(d =&gt; yScale(d.value));       // ← scale from §5
+
+svg.append("path")
+    .datum(timeSeries)              // bind the WHOLE array to ONE element
+    .attr("d", line)                 // line(timeSeries) → "M … L … L …"
+    .attr("fill", "none")
+    .attr("stroke", "#0072B2").attr("stroke-width", 2);</code></pre>
+    <div class="container" id="demo-line"></div>
+
+    <h2>9. <code>.datum()</code> versus <code>.data()</code></h2>
+    <p>This distinction trips up everybody once.</p>
+    <ul>
+        <li><strong><code>.data(array)</code></strong> binds <em>each row</em> of the array to <em>one
+                element</em> in the selection. Used for scatterplots, bar charts — one mark per row.</li>
+        <li><strong><code>.datum(value)</code></strong> binds <em>one whole value</em> (typically the entire
+            array) to <em>one element</em>. Used for line charts and area charts — one path that consumes
+            many rows.</li>
+    </ul>
+    <pre><code>// scatterplot: one circle per row
+svg.selectAll("circle")
+    .data(rows)               // ← data, plural
+    .join("circle");
+
+// line chart: one path consuming the whole array
+svg.append("path")
+    .datum(rows)              // ← datum, singular
+    .attr("d", line);</code></pre>
+
+    <h2>10. Curves are design choices</h2>
+    <p>By default <code>d3.line</code> connects points with straight segments. For smoother shapes,
+        configure a <code>.curve(...)</code>:</p>
+    <pre><code>const line = d3.line()
+    .x(d =&gt; x(d.year)).y(d =&gt; y(d.value))
+    .curve(d3.curveMonotoneX);   // ← here</code></pre>
+    <p>Common curves, each with a distinct visual character:</p>
+    <ul>
+        <li><code>curveLinear</code> — straight segments (default)</li>
+        <li><code>curveStep</code>, <code>curveStepAfter</code>, <code>curveStepBefore</code> — staircase
+            variants; honest about discrete change</li>
+        <li><code>curveMonotoneX</code> — smooth, restrained, never overshoots vertically (the safe default
+            for continuous data)</li>
+        <li><code>curveCatmullRom</code> — smoother, more decorative</li>
+        <li><code>curveBasis</code> — heavily smoothed; may not pass through points</li>
+    </ul>
+    <p>Same nine-point series, six curves:</p>
+    <div class="container" id="demo-curves"></div>
+    <p>Smoothing is a design choice. Use it to clarify the data, not to invent structure that isn't there.</p>
+
+    <h2>11. <code>d3.area</code> — the area generator</h2>
+    <p>An area chart is also one <code>&lt;path&gt;</code>, but the path needs both an upper and a lower
+        boundary. <code>d3.area()</code> takes <code>x</code>, <code>y0</code> (lower edge), and
+        <code>y1</code> (upper edge):</p>
+    <pre><code>const area = d3.area()
+    .x(d =&gt; xScale(d.year))
+    .y0(innerH)                  // baseline at bottom of plot
+    .y1(d =&gt; yScale(d.value));
+
+svg.append("path")
+    .datum(timeSeries)
+    .attr("d", area)
+    .attr("fill", "#0072B2").attr("opacity", 0.3);</code></pre>
+    <div class="container" id="demo-area"></div>
+    <p>Same data, same generator pattern as <code>d3.line</code>. Both accept <code>.curve(...)</code>; a
+        common composition is a filled area underneath plus a stroked line on top, both consuming the
+        same array via <code>.datum(...)</code>:</p>
+    <div class="container" id="demo-combined"></div>
+
+    <h2>12. Ridgeline — many small areas as one chart</h2>
+    <p>Once you can produce one area, you can produce thirty. A <strong>ridgeline chart</strong> stacks
+        small area generators vertically — one per group — sharing an x-axis. It's the standard pattern
+        from the Observable gallery's
+        <a href="https://observablehq.com/@d3/ridgeline-plot" target="_blank"><em>Ridgeline plot</em></a>:
+        a single <code>d3.area</code> reused for every row, with each row translated to its own
+        baseline. Below: 12 synthetic monthly distributions:</p>
+    <div class="container" id="demo-ridgeline"></div>
+
+    <h2>13. Quick reference</h2>
     <table>
         <thead><tr><th>Scale</th><th>Domain → Range</th><th>Use it for</th></tr></thead>
         <tbody>
@@ -191,12 +293,28 @@ color("B");            // → "#E69F00"</code></pre>
         </tbody>
     </table>
 
-    <div class="note"><strong>Takeaway.</strong> One scale per visual channel; pick the type from the shape of
-        the data, not from the chart you want. The margin convention plus an axis generator per scale completes
-        the chart skeleton. The toy datasets so far were hand-typed; <code>09d</code> introduces
-        <code>d3.csv</code>, the accessor pattern, and the helpers
-        (<code>extent</code> · <code>group</code> · <code>rollup</code> · <code>format</code>) needed to feed
-        real data into these scales.</div>
+    <div class="note"><strong>Takeaway.</strong> One scale per visual channel; pick the type from the
+        shape of the data, not from the chart you want. The margin convention plus an axis generator per
+        scale completes the chart skeleton. <code>d3.line</code> and <code>d3.area</code> are the
+        scale-driven shape generators that turn an array of rows into a single SVG path string — line
+        and area charts emerge by adding two ingredients (a generator + a <code>.datum(array)</code>
+        binding) on top of the scale machinery. The toy datasets so far were hand-typed; <code>09d</code>
+        introduces <code>d3.csv</code>, the accessor pattern, and the helpers (<code>extent</code> ·
+        <code>group</code> · <code>rollup</code> · <code>format</code>) needed to feed real data into
+        all of this.</div>
+
+    <h2>References</h2>
+    <ul>
+        <li><a href="https://d3js.org/d3-scale" target="_blank">d3-scale</a> — every scale type
+            with API docs and examples.</li>
+        <li><a href="https://d3js.org/d3-axis" target="_blank">d3-axis</a> — axis generators and
+            tick configuration.</li>
+        <li><a href="https://d3js.org/d3-shape/line" target="_blank">d3-shape · line</a> ·
+            <a href="https://d3js.org/d3-shape/area" target="_blank">area</a> ·
+            <a href="https://d3js.org/d3-shape/curve" target="_blank">curves</a>.</li>
+        <li><a href="https://observablehq.com/@d3/ridgeline-plot" target="_blank">Observable —
+            Ridgeline plot</a> (the canonical version of §12).</li>
+    </ul>
 
     <p class="tutorial-nav"><a href="09b-data-driven-svg.html">← 09b — Data-Driven SVG</a> ·
         <a href="index.html">L9 index</a> ·
@@ -302,10 +420,7 @@ color("B");            // → "#E69F00"</code></pre>
 
         // ============================================================
         // 4. Margin convention — without vs with
-        // 4a. NO margins: axis line is at the SVG top edge (y=0). axisTop renders
-        //     tick labels above the line — at y < 0, which is outside the SVG —
-        //     so the labels get clipped away. The student sees axis ticks but
-        //     no numbers.
+        // ============================================================
         {
             const root = d3.select("#demo-no-margin").append("svg")
                 .attr("width", CANVAS.width).attr("height", 30)
@@ -314,7 +429,6 @@ color("B");            // → "#E69F00"</code></pre>
             root.append("g").attr("transform", "translate(0, 0)")
                 .call(d3.axisTop(x).ticks(6, "~s"));
         }
-        // 4b. With margins: same axis, well-padded via makeCanvas.
         {
             const c = makeCanvas("#demo-with-margin", 80);
             const x = d3.scaleLinear().domain([0, 50000]).range([0, c.innerW]);
@@ -363,7 +477,6 @@ color("B");            // → "#E69F00"</code></pre>
                 .attr("r", 6).attr("fill", color === "#D55E00" ? "#D55E00" : "#0072B2")
                 .attr("opacity", 0.85);
         }
-        // We need innerW from a probe canvas; recompute it here from CANVAS.
         const probeInnerW = CANVAS.width - CANVAS.margin.left - CANVAS.margin.right;
         renderAxisRow(
             "#demo-log-linear",
@@ -383,11 +496,7 @@ color("B");            // → "#E69F00"</code></pre>
         function renderRadiusRow(selector, rScale, label, color) {
             const c = makeCanvas(selector, 130);
             caption(c.plot, label, color);
-            // arrange the seven circles evenly across innerW.
             const cellW = c.innerW / dataR.length;
-            // The maximum radius produced by either scale is 40, so place the
-            // row a bit higher than centre to leave room below for the largest
-            // circle without colliding with the bottom of the plot area.
             const cy = Math.max(c.innerH / 2, 50);
             dataR.forEach((d, i) => {
                 c.plot.append("circle")
@@ -397,8 +506,6 @@ color("B");            // → "#E69F00"</code></pre>
                     .attr("fill", color).attr("opacity", 0.7);
             });
         }
-        // Radius range capped at 40 so even the largest circle stays inside the
-        // row. innerW / 7 ≈ 88, so radius up to ~40 keeps circles non-overlapping.
         const rMax = 40;
         renderRadiusRow(
             "#demo-r-linear",
@@ -468,6 +575,171 @@ color("B");            // → "#E69F00"</code></pre>
         renderToggle("linear");
         document.querySelectorAll('input[name="scaleType"]').forEach(r =>
             r.addEventListener("change", e => renderToggle(e.target.value)));
+
+        // ============================================================
+        // §8-§11. shape generators (line, area, line+area)
+        // ============================================================
+        const series = [
+            { year: 2010, value: 24 }, { year: 2011, value: 38 },
+            { year: 2012, value: 35 }, { year: 2013, value: 52 },
+            { year: 2014, value: 48 }, { year: 2015, value: 67 },
+            { year: 2016, value: 71 }, { year: 2017, value: 65 },
+            { year: 2018, value: 82 }
+        ];
+
+        // §8. d3.line
+        {
+            const c = makeCanvas("#demo-line", 280);
+            const x = d3.scaleLinear().domain(d3.extent(series, d => d.year)).range([0, c.innerW]);
+            const y = d3.scaleLinear().domain([0, d3.max(series, d => d.value)]).nice().range([c.innerH, 0]);
+            c.plot.append("g").attr("class", "axis")
+                .attr("transform", `translate(0, ${c.innerH})`)
+                .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+            c.plot.append("g").attr("class", "axis").call(d3.axisLeft(y));
+
+            const line = d3.line().x(d => x(d.year)).y(d => y(d.value));
+            c.plot.append("path")
+                .datum(series).attr("d", line)
+                .attr("fill", "none").attr("stroke", "#0072B2").attr("stroke-width", 2);
+            c.plot.selectAll("circle").data(series).join("circle")
+                .attr("cx", d => x(d.year)).attr("cy", d => y(d.value)).attr("r", 4)
+                .attr("fill", "#0072B2");
+        }
+
+        // §10. curves
+        {
+            const c = makeCanvas("#demo-curves", 380, {
+                margin: { top: 24, right: 30, bottom: 36, left: 50 }
+            });
+            const halfW = c.innerW / 3;
+            const cellH = c.innerH / 2;
+            const variants = [
+                { name: "curveLinear",      curve: d3.curveLinear,      color: "#0072B2", row: 0, col: 0 },
+                { name: "curveStep",        curve: d3.curveStep,        color: "#D55E00", row: 0, col: 1 },
+                { name: "curveStepAfter",   curve: d3.curveStepAfter,   color: "#009E73", row: 0, col: 2 },
+                { name: "curveMonotoneX",   curve: d3.curveMonotoneX,   color: "#CC79A7", row: 1, col: 0 },
+                { name: "curveCatmullRom",  curve: d3.curveCatmullRom,  color: "#E69F00", row: 1, col: 1 },
+                { name: "curveBasis",       curve: d3.curveBasis,       color: "#7F3C8D", row: 1, col: 2 }
+            ];
+            const x = d3.scaleLinear().domain(d3.extent(series, d => d.year)).range([8, halfW - 8]);
+            const y = d3.scaleLinear().domain([0, d3.max(series, d => d.value)]).range([cellH - 18, 8]);
+
+            variants.forEach(v => {
+                const cell = c.plot.append("g")
+                    .attr("transform", `translate(${v.col * halfW}, ${v.row * cellH})`);
+                cell.append("rect")
+                    .attr("width", halfW - 4).attr("height", cellH - 4)
+                    .attr("fill", "none").attr("stroke", "#eee");
+                cell.append("text").attr("x", 8).attr("y", 16)
+                    .style("font-size", "var(--text-sm)").attr("fill", "#444").attr("font-weight", "600")
+                    .text(v.name);
+                const line = d3.line().x(d => x(d.year)).y(d => y(d.value)).curve(v.curve);
+                cell.append("path")
+                    .datum(series).attr("d", line)
+                    .attr("fill", "none").attr("stroke", v.color).attr("stroke-width", 2);
+                cell.selectAll("circle").data(series).join("circle")
+                    .attr("cx", d => x(d.year)).attr("cy", d => y(d.value)).attr("r", 2.5)
+                    .attr("fill", v.color);
+            });
+        }
+
+        // §11. d3.area
+        {
+            const c = makeCanvas("#demo-area", 280);
+            const x = d3.scaleLinear().domain(d3.extent(series, d => d.year)).range([0, c.innerW]);
+            const y = d3.scaleLinear().domain([0, d3.max(series, d => d.value)]).nice().range([c.innerH, 0]);
+            c.plot.append("g").attr("class", "axis")
+                .attr("transform", `translate(0, ${c.innerH})`)
+                .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+            c.plot.append("g").attr("class", "axis").call(d3.axisLeft(y));
+
+            const area = d3.area()
+                .x(d => x(d.year)).y0(c.innerH).y1(d => y(d.value))
+                .curve(d3.curveMonotoneX);
+            c.plot.append("path").datum(series).attr("d", area)
+                .attr("fill", "#0072B2").attr("opacity", 0.3);
+        }
+
+        // §11. line + area combined
+        {
+            const c = makeCanvas("#demo-combined", 280);
+            const x = d3.scaleLinear().domain(d3.extent(series, d => d.year)).range([0, c.innerW]);
+            const y = d3.scaleLinear().domain([0, d3.max(series, d => d.value)]).nice().range([c.innerH, 0]);
+            c.plot.append("g").attr("class", "axis")
+                .attr("transform", `translate(0, ${c.innerH})`)
+                .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+            c.plot.append("g").attr("class", "axis").call(d3.axisLeft(y));
+
+            const area = d3.area().x(d => x(d.year)).y0(c.innerH).y1(d => y(d.value))
+                .curve(d3.curveMonotoneX);
+            const line = d3.line().x(d => x(d.year)).y(d => y(d.value))
+                .curve(d3.curveMonotoneX);
+
+            c.plot.append("path").datum(series).attr("d", area)
+                .attr("fill", "#0072B2").attr("opacity", 0.25);
+            c.plot.append("path").datum(series).attr("d", line)
+                .attr("fill", "none").attr("stroke", "#0072B2").attr("stroke-width", 2);
+            c.plot.selectAll("circle").data(series).join("circle")
+                .attr("cx", d => x(d.year)).attr("cy", d => y(d.value)).attr("r", 4)
+                .attr("fill", "#0072B2");
+        }
+
+        // §12. ridgeline
+        {
+            const months = ["Jan","Feb","Mar","Apr","May","Jun",
+                            "Jul","Aug","Sep","Oct","Nov","Dec"];
+            const xs = d3.range(0, 30);
+            const rng = d3.randomLcg(7);
+            const rows = months.map((m, i) => {
+                const mu = 6 + 14 * Math.sin((i / 11) * Math.PI);
+                const sigma = 3 + 0.4 * i;
+                const values = xs.map(x => {
+                    const z = (x - mu) / sigma;
+                    return Math.exp(-0.5 * z * z) * (1 + 0.15 * (rng() - 0.5));
+                });
+                return { key: m, values };
+            });
+
+            const rowH = 26;
+            const c = makeCanvas("#demo-ridgeline", rowH * months.length + 60,
+                { margin: { top: 20, right: 20, bottom: 30, left: 50 } });
+
+            const x = d3.scaleLinear().domain([0, 29]).range([0, c.innerW]);
+            const globalMax = d3.max(rows, r => d3.max(r.values));
+            const yLocal = d3.scaleLinear()
+                .domain([0, globalMax]).range([0, -rowH * 2.2]);
+            const colour = d3.scaleSequential(d3.interpolateViridis).domain([0, months.length - 1]);
+
+            c.plot.append("g").attr("class", "axis")
+                .attr("transform", `translate(0, ${c.innerH})`)
+                .call(d3.axisBottom(x).ticks(6).tickFormat(d => `day ${d}`));
+
+            c.plot.append("g")
+                .selectAll("text").data(rows).join("text")
+                .attr("x", -10)
+                .attr("y", (d, i) => (i + 1) * rowH)
+                .attr("text-anchor", "end").attr("dy", 4)
+                .style("font-size", "var(--text-md)").style("fill", "#555")
+                .text(d => d.key);
+
+            const area = d3.area()
+                .x((d, i) => x(i))
+                .y0(0)
+                .y1(d => yLocal(d))
+                .curve(d3.curveBasis);
+
+            c.plot.append("g")
+                .selectAll("g.ridge").data(rows).join("g")
+                .attr("class", "ridge")
+                .attr("transform", (d, i) => `translate(0, ${(i + 1) * rowH})`)
+                .each(function (row, i) {
+                    d3.select(this).append("path")
+                        .attr("d", area(row.values))
+                        .attr("fill", colour(i))
+                        .attr("fill-opacity", 0.75)
+                        .attr("stroke", "white").attr("stroke-width", 0.7);
+                });
+        }
     </script>
 </body>
 

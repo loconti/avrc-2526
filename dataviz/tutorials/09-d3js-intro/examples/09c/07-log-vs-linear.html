@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>09c — log vs linear</title>
+    <style>
+      h1 { font-size: 1.4em; margin-bottom: 0.3em; }
+      .lead { color: #555; margin-top: 0; }
+      .lead a { color: #0072B2; }
+        body { max-width: 1100px; margin: 2em auto; padding: 0 1.5em;
+             line-height: 1.55; color: #222; font-size: 16px;
+             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        svg { width: 100%; height: auto; max-width: 100%; display: block;
+             border: 1px solid #ddd; background: white; }
+        .axis text { font-size: 13px; fill: #555; }
+        .axis path, .axis line { stroke: #bbb; }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="../_shared/utils.js"></script>
+</head>
+<body>
+    <h1>09c §6 — Log vs linear</h1>
+    <p class="lead">Same data, two x-scales. Linear bunches the small values; log gives each order of magnitude its own tick. <a href="../../09c-scales-and-axes.html">Source tutorial &rarr;</a></p>
+
+    <div id="lin"></div>
+    <div id="log"></div>
+    <script>
+        function caption(plot, text, color = "#666") {
+            return plot.append("text").attr("x", 0).attr("y", -8)
+                .style("font-size", "12px").style("fill", color).text(text);
+        }
+
+        const data = [10, 30, 100, 300, 1000, 3000, 10000, 30000];
+        const probeInnerW = 700 - 50 - 30;
+
+        function row(selector, scale, label, color) {
+            const c = makeCanvas(selector, 110);
+            caption(c.plot, label, color);
+            c.plot.append("g").attr("transform", `translate(0, ${c.innerH})`)
+                .call(d3.axisBottom(scale).ticks(6, "~s"));
+            c.plot.selectAll("circle").data(data).join("circle")
+                .attr("cx", d => scale(d)).attr("cy", c.innerH / 2)
+                .attr("r", 6).attr("fill", color).attr("opacity", 0.85);
+        }
+        row("#lin",
+            d3.scaleLinear().domain(d3.extent(data)).range([0, probeInnerW]),
+            "scaleLinear  — small values bunch up at the left", "#D55E00");
+        row("#log",
+            d3.scaleLog().domain(d3.extent(data)).range([0, probeInnerW]),
+            "scaleLog  — each tick is one order of magnitude", "#0072B2");
+    </script>
+</body>
+</html>

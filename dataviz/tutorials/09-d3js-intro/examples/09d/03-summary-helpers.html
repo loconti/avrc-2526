@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>09d — summary helpers</title>
+    <style>
+      h1 { font-size: 1.4em; margin-bottom: 0.3em; }
+      .lead { color: #555; margin-top: 0; }
+      .lead a { color: #0072B2; }
+        body { max-width: 1100px; margin: 2em auto; padding: 0 1.5em;
+             line-height: 1.55; color: #222; font-size: 16px;
+             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        svg { width: 100%; height: auto; max-width: 100%; display: block;
+             border: 1px solid #ddd; background: white; }
+        .axis text { font-size: 13px; fill: #555; }
+        .axis path, .axis line { stroke: #bbb; }
+        table { border-collapse: collapse; margin: 1em 0; }
+        th, td { padding: 0.5em 0.8em; border-bottom: 1px solid #e1e4e8; text-align: left; }
+        th { background: #f5f7fa; font-weight: 600; }
+        code { font-family: ui-monospace, Menlo, monospace;
+               background: rgba(175,184,193,0.25); padding: 0.1em 0.3em;
+               border-radius: 3px; font-size: 0.9em; }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <h1>09d §3 — Summary helpers</h1>
+    <p class="lead"><code>d3.min</code>, <code>d3.max</code>, <code>d3.extent</code>, <code>d3.mean</code>, <code>d3.median</code>, <code>d3.sum</code> on the Gapminder 2007 slice. <a href="../../09d-loading-data.html">Source tutorial &rarr;</a></p>
+
+    <table id="summary">
+        <thead><tr><th>Helper</th><th>Result</th></tr></thead>
+        <tbody></tbody>
+    </table>
+    <script>
+        const fmtNum = d3.format(",.2f");
+        const fmtPop = d3.format("~s");
+
+        d3.csv("../../datasets/gapminder.csv", d => ({
+            country: d.country, continent: d.continent,
+            year: +d.year, lifeExp: +d.lifeExp,
+            pop: +d.pop, gdpPercap: +d.gdpPercap
+        })).then(data => {
+            const data2007 = data.filter(d => d.year === 2007);
+            const rows = [
+                ["d3.min(data, d => d.lifeExp)",     fmtNum(d3.min(data2007, d => d.lifeExp))],
+                ["d3.max(data, d => d.lifeExp)",     fmtNum(d3.max(data2007, d => d.lifeExp))],
+                ["d3.extent(data, d => d.lifeExp)",  "[" + d3.extent(data2007, d => d.lifeExp).map(fmtNum).join(", ") + "]"],
+                ["d3.mean(data, d => d.lifeExp)",    fmtNum(d3.mean(data2007, d => d.lifeExp))],
+                ["d3.median(data, d => d.lifeExp)",  fmtNum(d3.median(data2007, d => d.lifeExp))],
+                ["d3.sum(data, d => d.pop)",         fmtPop(d3.sum(data2007, d => d.pop))]
+            ];
+            const tb = document.querySelector("#summary tbody");
+            rows.forEach(([k, v]) => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `<td><code>${k}</code></td><td>${v}</td>`;
+                tb.appendChild(tr);
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>09a — &lt;circle&gt;</title>
+    <style>
+      h1 { font-size: 1.4em; margin-bottom: 0.3em; }
+      .lead { color: #555; margin-top: 0; }
+      .lead a { color: #0072B2; }
+        body { max-width: 1100px; margin: 2em auto; padding: 0 1.5em;
+             line-height: 1.55; color: #222; font-size: 16px;
+             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        svg { width: 100%; height: auto; max-width: 100%; display: block;
+             border: 1px solid #ddd; background: white; }
+        .axis text { font-size: 13px; fill: #555; }
+        .axis path, .axis line { stroke: #bbb; }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <h1>09a §5 — &lt;circle&gt;</h1>
+    <p class="lead"><code>cx</code>, <code>cy</code>, <code>r</code>; basic vs ring (no fill); a row of varying radii. <a href="../../09a-building-svg-with-d3.html">Source tutorial &rarr;</a></p>
+
+    <div id="demo"></div>
+    <script>
+        const svg = d3.select("#demo").append("svg")
+            .attr("width", 600).attr("height", 140).attr("viewBox", `0 0 ${600} ${140}`).attr("preserveAspectRatio", "xMidYMid meet")
+            .style("background", "#fafafa").style("border", "1px solid #ddd");
+
+        // basic
+        svg.append("circle").attr("cx", 60).attr("cy", 60).attr("r", 28)
+            .attr("fill", "#0072B2");
+        svg.append("text").attr("x", 60).attr("y", 110).attr("text-anchor", "middle")
+            .style("font-size", "12px").attr("fill", "#666").text("basic");
+
+        // ring
+        svg.append("circle").attr("cx", 180).attr("cy", 60).attr("r", 28)
+            .attr("fill", "none").attr("stroke", "#0072B2").attr("stroke-width", 3);
+        svg.append("text").attr("x", 180).attr("y", 110).attr("text-anchor", "middle")
+            .style("font-size", "12px").attr("fill", "#666").text("ring");
+
+        // varying radii
+        const startX = 320;
+        [8, 14, 20, 26, 32].forEach((r, i) => {
+            svg.append("circle")
+                .attr("cx", startX + i * 56).attr("cy", 60).attr("r", r)
+                .attr("fill", "#0072B2").attr("opacity", 0.7);
+        });
+        svg.append("text").attr("x", startX + 4 * 56 / 2 + 30).attr("y", 110).attr("text-anchor", "middle")
+            .style("font-size", "12px").attr("fill", "#666").text("varying r");
+    </script>
+</body>
+</html>

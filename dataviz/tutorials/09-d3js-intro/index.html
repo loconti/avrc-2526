@@ -30,15 +30,18 @@
             playground. No data yet.
         </li>
         <li><a href="09b-data-driven-svg.html"><strong>09b — Data-Driven SVG</strong></a><br>
-            The data join: <code>selectAll</code> · <code>data</code> · <code>join</code>. Toy
-            <code>{x, y, value}</code> dataset placed at literal pixel coordinates (no scales). Explicit
-            visualisation of the <strong>enter / update / exit</strong> sub-selections, plus a reactive reshuffle
-            demo.
+            The static data join: <code>selectAll</code> · <code>data</code> · <code>join("tag")</code>.
+            Toy <code>{x, y, value}</code> dataset placed at literal pixel coordinates (no scales). What
+            <code>.join</code> does internally — the enter/update/exit decomposition. The dynamic side
+            of the same machinery (key functions and custom callbacks in <code>10a</code>; transitions
+            in <code>10b</code>).
         </li>
-        <li><a href="09c-scales-and-axes.html"><strong>09c — Scales and Axes</strong></a><br>
-            D3 scales (<code>scaleLinear</code>, <code>scaleLog</code>, <code>scaleBand</code>) on the same dataset
-            with a radio toggle between scatter and bar chart. Margin convention. Axes via <code>d3.axisBottom</code>
-            and <code>d3.axisLeft</code>. Same skeleton applied to a Gapminder slice.
+        <li><a href="09c-scales-and-axes.html"><strong>09c — Scales, Axes, and Shape Generators</strong></a><br>
+            D3 scales (<code>scaleLinear</code>, <code>scaleLog</code>, <code>scaleSqrt</code>,
+            <code>scaleBand</code>, <code>scaleOrdinal</code>) on a toy dataset; margin convention; axes
+            via <code>d3.axisBottom</code> / <code>d3.axisLeft</code>. The scale-driven shape generators
+            <code>d3.line</code> and <code>d3.area</code> with curves, <code>.datum()</code> vs
+            <code>.data()</code>, and a ridgeline composition.
         </li>
         <li><a href="09d-loading-data.html"><strong>09d — Loading Data and D3 Helpers</strong></a><br>
             <code>d3.csv</code> with and without an accessor (string vs number coercion). Helpers
@@ -62,26 +65,72 @@ python -m http.server 8000
 # open http://localhost:8000/</code></pre>
     <p>D3 is loaded from the CDN (<code>https://d3js.org/d3.v7.min.js</code>); no installation required.</p>
 
-    <h2>Coverage check (DV09 deck → tutorials)</h2>
+    <h2>Per-demo files</h2>
+    <p>The <code>examples/</code> subfolder contains one self-contained HTML file per demo —
+        each one ships its own copy of styling and scripts, so you can open any of them on its own
+        (or copy a single file into another project) without the rest of the tutorial folder.</p>
     <table>
-        <thead><tr><th>Concept</th><th>Practiced in</th></tr></thead>
+        <thead><tr><th>Tutorial</th><th>Examples</th></tr></thead>
         <tbody>
-            <tr><td>HTML, CSS, JS, the DOM</td><td>09a</td></tr>
-            <tr><td><code>d3.select</code>, <code>append</code>, <code>attr</code>, <code>style</code></td><td>09a</td></tr>
-            <tr><td>SVG element catalog (rect, circle, line, path, text, g)</td><td>09a</td></tr>
-            <tr><td>SVG coordinate system (top-left origin, y down)</td><td>09a</td></tr>
-            <tr><td>Data join: <code>selectAll</code>, <code>data</code>, <code>join</code></td><td>09b</td></tr>
-            <tr><td>Enter / update / exit sub-selections</td><td>09b</td></tr>
-            <tr><td>Scales (linear, log, band)</td><td>09c</td></tr>
-            <tr><td>Margin convention</td><td>09b, 09c, 09e</td></tr>
-            <tr><td>Axes (<code>axisBottom</code>, <code>axisLeft</code>)</td><td>09c, 09e</td></tr>
-            <tr><td><code>d3.csv</code> with accessor</td><td>09d, 09e</td></tr>
-            <tr><td>Helpers: <code>min</code> / <code>max</code> / <code>extent</code> / <code>mean</code> /
-                <code>group</code> / <code>rollup</code></td><td>09d</td></tr>
-            <tr><td>Formatters: <code>d3.format</code>, <code>d3.timeFormat</code></td><td>09d</td></tr>
-            <tr><td>Full scatterplot with size + color encoding</td><td>09e</td></tr>
+            <tr>
+                <td><a href="09a-building-svg-with-d3.html">09a — Building SVG with D3</a></td>
+                <td>
+                    <a href="examples/09a/01-first-d3-line.html">first D3 line</a> ·
+                    <a href="examples/09a/02-svg-canvas.html">SVG canvas</a> ·
+                    <a href="examples/09a/03-rect.html">&lt;rect&gt;</a> ·
+                    <a href="examples/09a/04-circle.html">&lt;circle&gt;</a> ·
+                    <a href="examples/09a/05-line.html">&lt;line&gt;</a> ·
+                    <a href="examples/09a/06-path.html">&lt;path&gt;</a> ·
+                    <a href="examples/09a/07-text.html">&lt;text&gt;</a> ·
+                    <a href="examples/09a/08-group.html">&lt;g&gt; transforms</a> ·
+                    <a href="examples/09a/09-coordinate-system.html">SVG coordinates</a> ·
+                    <a href="examples/09a/10-attribute-playground.html">attribute playground</a>
+                </td>
+            </tr>
+            <tr>
+                <td><a href="09b-data-driven-svg.html">09b — Data-Driven SVG</a></td>
+                <td>
+                    <a href="examples/09b/01-data-join.html">static data join</a>
+                </td>
+            </tr>
+            <tr>
+                <td><a href="09c-scales-and-axes.html">09c — Scales, Axes, and Shape Generators</a></td>
+                <td>
+                    <a href="examples/09c/01-broken-vs-fixed.html">why scales</a> ·
+                    <a href="examples/09c/02-linear-interactive.html">scaleLinear interactive</a> ·
+                    <a href="examples/09c/03-nice-comparison.html">.nice() comparison</a> ·
+                    <a href="examples/09c/04-axis-config.html">axis configuration</a> ·
+                    <a href="examples/09c/05-margin-convention.html">margin convention</a> ·
+                    <a href="examples/09c/06-2d-y-inversion.html">y-range inversion</a> ·
+                    <a href="examples/09c/07-log-vs-linear.html">log vs linear</a> ·
+                    <a href="examples/09c/08-sqrt-vs-linear-r.html">sqrt vs linear radius</a> ·
+                    <a href="examples/09c/09-categorical-toggle.html">categorical scale toggle</a>
+                </td>
+            </tr>
+            <tr>
+                <td><a href="09d-loading-data.html">09d — Loading Data and D3 Helpers</a></td>
+                <td>
+                    <a href="examples/09d/01-csv-raw.html">d3.csv raw</a> ·
+                    <a href="examples/09d/02-csv-accessor.html">d3.csv with accessor</a> ·
+                    <a href="examples/09d/03-summary-helpers.html">summary helpers</a> ·
+                    <a href="examples/09d/04-group-rollup.html">d3.group / d3.rollup</a> ·
+                    <a href="examples/09d/05-format.html">d3.format / timeFormat</a>
+                </td>
+            </tr>
+            <tr>
+                <td><a href="09e-first-scatterplot.html">09e — First Scatterplot</a></td>
+                <td>
+                    <a href="examples/09e/01-full-scatterplot.html">Gapminder scatterplot capstone</a>
+                </td>
+            </tr>
         </tbody>
     </table>
+
+    <h2>Where this leads</h2>
+    <p>L10 picks up the static data join from 09b and turns it into a dynamic one: re-binding
+        with a different array, key functions, transitions, user input, and the layouts (bar,
+        stacked bar, streamgraph) and navigation (<code>d3.zoom</code>) that round out the
+        full advanced D3 vocabulary. L11 / L12 then apply the same machinery to networks.</p>
 
     <h2>References</h2>
     <ul>

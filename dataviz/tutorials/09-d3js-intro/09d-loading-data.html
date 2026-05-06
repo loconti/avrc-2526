@@ -18,6 +18,21 @@
         (<code>d3.extent</code>, <code>d3.group</code>, <code>d3.rollup</code>, <code>d3.format</code>) before
         plotting.</p>
 
+    <h2>How this tutorial is organised</h2>
+    <p>Three blocks, in order:</p>
+    <ol>
+        <li><strong>Loading and typing</strong> (§1-§2). The plain <code>d3.csv</code> call
+            (every column is a string), then the accessor pattern that coerces numeric columns
+            with the unary <code>+</code>.</li>
+        <li><strong>Summarising</strong> (§3-§4). The aggregation helpers
+            (<code>min</code>, <code>max</code>, <code>extent</code>, <code>mean</code>,
+            <code>median</code>, <code>sum</code>) and the group-by helpers
+            (<code>d3.group</code>, <code>d3.rollup</code>) that reshape an array of rows into a
+            <code>Map</code> keyed by some field.</li>
+        <li><strong>Formatting</strong> (§5). <code>d3.format</code> specifiers and
+            <code>d3.timeFormat</code>, applied to live samples.</li>
+    </ol>
+
     <h2>1. Loading a CSV</h2>
     <p>The simplest call:</p>
     <pre><code>const raw = await d3.csv("./datasets/gapminder.csv");
@@ -100,6 +115,17 @@ fmtDate(new Date());              // e.g. "2026-04-28"</code></pre>
         <code>d3.rollup</code>, and <code>d3.format</code> handle most of the pre-plot work. The capstone in
         <code>09e</code> combines everything from <code>09a</code>–<code>09d</code> into a full Gapminder
         scatterplot with four scales, axes, a legend, and tooltips.</div>
+
+    <h2>References</h2>
+    <ul>
+        <li><a href="https://d3js.org/d3-fetch" target="_blank">d3-fetch</a> — <code>d3.csv</code>,
+            <code>d3.tsv</code>, <code>d3.json</code> and accessor pattern.</li>
+        <li><a href="https://d3js.org/d3-array" target="_blank">d3-array</a> — every aggregation
+            and group helper used in §3-§4.</li>
+        <li><a href="https://d3js.org/d3-format" target="_blank">d3-format</a> ·
+            <a href="https://d3js.org/d3-time-format" target="_blank">d3-time-format</a> —
+            specifier reference for §5.</li>
+    </ul>
 
     <p class="tutorial-nav"><a href="09c-scales-and-axes.html">← 09c — Scales and Axes</a> ·
         <a href="index.html">L9 index</a> ·

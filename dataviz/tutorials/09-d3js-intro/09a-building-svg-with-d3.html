@@ -18,6 +18,21 @@
       The middle of this tutorial walks through every SVG primitive and the attributes you can customise on each.
     </p>
 
+    <h2>How this tutorial is organised</h2>
+    <p>Three blocks, in order:</p>
+    <ol>
+      <li><strong>Wiring</strong> (§1-§3). The HTML scaffolding D3 expects; the
+        <code>select → append → attr → style</code> chain; appending the SVG canvas itself.</li>
+      <li><strong>The SVG element catalog</strong> (§4-§9). One section per primitive —
+        <code>&lt;rect&gt;</code>, <code>&lt;circle&gt;</code>, <code>&lt;line&gt;</code>,
+        <code>&lt;path&gt;</code>, <code>&lt;text&gt;</code>, <code>&lt;g&gt;</code> — with
+        several variants and an attribute reference table for each.</li>
+      <li><strong>Coordinates and an interactive playground</strong> (§10-§11). The SVG
+        coordinate system (top-left origin, y grows downward), then a slider-driven
+        <code>&lt;circle&gt;</code> that demonstrates the <code>attr</code> mechanic on a single
+        element.</li>
+    </ol>
+
     <h2>1. The HTML scaffolding</h2>
     <p>
       A D3 page is a normal HTML page with two extra ingredients: the D3 library, loaded from a CDN, and a
@@ -228,7 +243,8 @@ svg.append("line")
       language: <code>M x y</code> (MoveTo), <code>L x y</code> (LineTo), <code>Q cx cy x y</code> (Quadratic
       curve), <code>C c1x c1y c2x c2y x y</code> (Cubic), <code>Z</code> (close back to the start). In real
       D3 work we rarely write these strings by hand — there are shape generators (covered in
-      <code>DV10</code>) that build them for us. Here we write a few by hand to make the language concrete:</p>
+      <code>09c</code> for line/area, <code>10d</code> for stack/area combinations) that build them for us.
+      Here we write a few by hand to make the language concrete:</p>
     <pre><code>// triangle: move to corner, lines to the other two, close
 svg.append("path")
     .attr("d", "M 60 110 L 100 30 L 140 110 Z")
@@ -392,6 +408,17 @@ d3.select("#slider-r" ).on("input", function () { dot.attr("r",  +this.value); }
       (<code>09b</code>) replaces hand-appended elements with a data-driven join: one DOM element per row
       of an array.
     </div>
+
+    <h2>References</h2>
+    <ul>
+      <li><a href="https://d3js.org/d3-selection" target="_blank">d3-selection</a> —
+        <code>select</code>, <code>selectAll</code>, <code>append</code>, <code>attr</code>,
+        <code>style</code>.</li>
+      <li><a href="https://developer.mozilla.org/en-US/docs/Web/SVG/Element" target="_blank">MDN —
+        SVG element reference</a> (every primitive used in §4-§9).</li>
+      <li><a href="https://developer.mozilla.org/en-US/docs/Web/SVG/Tutorial/Paths" target="_blank">MDN
+        — SVG paths tutorial</a> (the <code>d</code> mini-language from §7).</li>
+    </ul>
 
     <p class="tutorial-nav">
       <a href="index.html">← L9 index</a> ·
@@ -579,8 +606,6 @@ d3.select("#slider-r" ).on("input", function () { dot.attr("r",  +this.value); }
       }
 
       // ---------- §10. coordinate system demo ----------
-      // Outer SVG is 360 x 220. We translate the inner content by (60, 40) so
-      // that "(0, 0)" inside the demo is visible, not flush against the corner.
       const coordsSvg = d3.select("#coords").append("svg")
         .attr("width", 360).attr("height", 220)
         .style("background", "#fafafa")

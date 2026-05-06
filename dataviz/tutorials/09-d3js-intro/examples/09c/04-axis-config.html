@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>09c — axis configuration</title>
+    <style>
+      h1 { font-size: 1.4em; margin-bottom: 0.3em; }
+      .lead { color: #555; margin-top: 0; }
+      .lead a { color: #0072B2; }
+        body { max-width: 1100px; margin: 2em auto; padding: 0 1.5em;
+             line-height: 1.55; color: #222; font-size: 16px;
+             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        svg { width: 100%; height: auto; max-width: 100%; display: block;
+             border: 1px solid #ddd; background: white; }
+        .axis text { font-size: 13px; fill: #555; }
+        .axis path, .axis line { stroke: #bbb; }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="../_shared/utils.js"></script>
+</head>
+<body>
+    <h1>09c §3 — Axis configuration</h1>
+    <p class="lead">Same scale, four configurations: default, custom <code>.ticks(4)</code>, explicit <code>tickValues</code>, and SI <code>tickFormat</code>. <a href="../../09c-scales-and-axes.html">Source tutorial &rarr;</a></p>
+
+    <div id="a1"></div>
+    <div id="a2"></div>
+    <div id="a3"></div>
+    <div id="a4"></div>
+    <script>
+        function caption(plot, text, color = "#666") {
+            return plot.append("text").attr("x", 0).attr("y", -8)
+                .style("font-size", "12px").style("fill", color).text(text);
+        }
+
+        const variants = [
+            { id: "a1", label: "(1)  d3.axisBottom(x)",                                cfg: a => a },
+            { id: "a2", label: "(2)  d3.axisBottom(x).ticks(4)",                       cfg: a => a.ticks(4) },
+            { id: "a3", label: "(3)  d3.axisBottom(x).tickValues([0, 12500, 25000, 37500, 50000])",
+              cfg: a => a.tickValues([0, 12500, 25000, 37500, 50000]) },
+            { id: "a4", label: '(4)  d3.axisBottom(x).tickFormat(d3.format("~s"))',
+              cfg: a => a.tickFormat(d3.format("~s")) }
+        ];
+        variants.forEach(v => {
+            const c = makeCanvas("#" + v.id, 90);
+            caption(c.plot, v.label);
+            const x = d3.scaleLinear().domain([0, 50000]).range([0, c.innerW]);
+            c.plot.append("g").attr("transform", `translate(0, ${c.innerH})`)
+                .call(v.cfg(d3.axisBottom(x)));
+        });
+    </script>
+</body>
+</html>

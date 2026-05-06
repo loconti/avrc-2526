@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>09d — d3.csv with accessor</title>
+    <style>
+      h1 { font-size: 1.4em; margin-bottom: 0.3em; }
+      .lead { color: #555; margin-top: 0; }
+      .lead a { color: #0072B2; }
+        body { max-width: 1100px; margin: 2em auto; padding: 0 1.5em;
+             line-height: 1.55; color: #222; font-size: 16px;
+             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        svg { width: 100%; height: auto; max-width: 100%; display: block;
+             border: 1px solid #ddd; background: white; }
+        .axis text { font-size: 13px; fill: #555; }
+        .axis path, .axis line { stroke: #bbb; }
+        pre  { background: #f6f8fa; padding: 1em; border-radius: 6px;
+               border: 1px solid #d0d7de; font-family: ui-monospace, Menlo, monospace;
+               font-size: 0.9em; }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <h1>09d §2 — d3.csv with an accessor</h1>
+    <p class="lead">Pass a row-accessor as the second argument and coerce numeric columns with the unary <code>+</code>. <a href="../../09d-loading-data.html">Source tutorial &rarr;</a></p>
+
+    <pre id="row">loading…</pre>
+    <p id="types"></p>
+    <script>
+        d3.csv("../../datasets/gapminder.csv", d => ({
+            country: d.country,
+            continent: d.continent,
+            year: +d.year,
+            lifeExp: +d.lifeExp,
+            pop: +d.pop,
+            gdpPercap: +d.gdpPercap
+        })).then(data => {
+            document.getElementById("row").textContent = JSON.stringify(data[0], null, 2);
+            document.getElementById("types").textContent =
+                Object.entries(data[0]).map(([k, v]) => `typeof ${k} = "${typeof v}"`).join(" · ");
+        });
+    </script>
+</body>
+</html>

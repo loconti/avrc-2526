@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>09a — first D3 line</title>
+    <style>
+      h1 { font-size: 1.4em; margin-bottom: 0.3em; }
+      .lead { color: #555; margin-top: 0; }
+      .lead a { color: #0072B2; }
+      body { max-width: 1100px; margin: 2em auto; padding: 0 1.5em;
+             line-height: 1.55; color: #222; font-size: 16px;
+             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+      svg { width: 100%; height: auto; max-width: 100%; display: block;
+             border: 1px solid #ddd; background: white; }
+      .axis text {
+        font-size: 13px;
+        fill: #555;
+      }
+      .axis path,
+      .axis line {
+        stroke: #bbb;
+      }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+  </head>
+  <body>
+    <h1>09a §2 — First D3 line</h1>
+    <p class="lead">The simplest possible D3 chain: <code>d3.select → append → text</code>. Click the button to append a paragraph each time. <a href="../../09a-building-svg-with-d3.html">Source tutorial &rarr;</a></p>
+
+    <p><button id="hello-run">Run d3.select…append…text</button></p>
+    <div
+      id="hello-target"
+      style="border: 1px dashed #bbb; min-height: 2em; padding: 0.5em"
+    ></div>
+    <script>
+      document.getElementById("hello-run").addEventListener("click", () => {
+        d3.select("#hello-target").append("p").text("Hello from D3!");
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>09c — sqrt vs linear radius</title>
+    <style>
+      h1 { font-size: 1.4em; margin-bottom: 0.3em; }
+      .lead { color: #555; margin-top: 0; }
+      .lead a { color: #0072B2; }
+        body { max-width: 1100px; margin: 2em auto; padding: 0 1.5em;
+             line-height: 1.55; color: #222; font-size: 16px;
+             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        svg { width: 100%; height: auto; max-width: 100%; display: block;
+             border: 1px solid #ddd; background: white; }
+        .axis text { font-size: 13px; fill: #555; }
+        .axis path, .axis line { stroke: #bbb; }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="../_shared/utils.js"></script>
+</head>
+<body>
+    <h1>09c §6 — Sqrt vs linear radius</h1>
+    <p class="lead">Seven values mapped to circle radius two ways. <code>scaleLinear</code> makes area grow quadratically; <code>scaleSqrt</code> makes area proportional to value (the perceptually correct choice). <a href="../../09c-scales-and-axes.html">Source tutorial &rarr;</a></p>
+
+    <div id="rlin"></div>
+    <div id="rsqrt"></div>
+    <script>
+        function caption(plot, text, color = "#666") {
+            return plot.append("text").attr("x", 0).attr("y", -8)
+                .style("font-size", "12px").style("fill", color).text(text);
+        }
+
+        const dataR = [1, 4, 9, 16, 25, 36, 49];
+        const rMax = 40;
+
+        function row(selector, rScale, label, color) {
+            const c = makeCanvas(selector, 130);
+            caption(c.plot, label, color);
+            const cellW = c.innerW / dataR.length;
+            const cy = Math.max(c.innerH / 2, 50);
+            dataR.forEach((d, i) => {
+                c.plot.append("circle")
+                    .attr("cx", cellW * (i + 0.5)).attr("cy", cy)
+                    .attr("r", rScale(d)).attr("fill", color).attr("opacity", 0.7);
+            });
+        }
+        row("#rlin",
+            d3.scaleLinear().domain([0, d3.max(dataR)]).range([0, rMax]),
+            "r = scaleLinear(value)  — radius proportional to value, area grows quadratically",
+            "#D55E00");
+        row("#rsqrt",
+            d3.scaleSqrt().domain([0, d3.max(dataR)]).range([0, rMax]),
+            "r = scaleSqrt(value)  — area proportional to value (perceptually correct)",
+            "#0072B2");
+    </script>
+</body>
+</html>

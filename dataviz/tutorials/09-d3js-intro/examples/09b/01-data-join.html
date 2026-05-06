@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>09b — data join</title>
+    <style>
+      h1 { font-size: 1.4em; margin-bottom: 0.3em; }
+      .lead { color: #555; margin-top: 0; }
+      .lead a { color: #0072B2; }
+        body { max-width: 1100px; margin: 2em auto; padding: 0 1.5em;
+             line-height: 1.55; color: #222; font-size: 16px;
+             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        svg { width: 100%; height: auto; max-width: 100%; display: block;
+             border: 1px solid #ddd; background: white; }
+        .axis text { font-size: 13px; fill: #555; }
+        .axis path, .axis line { stroke: #bbb; }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="../_shared/utils.js"></script>
+</head>
+<body>
+    <h1>09b §2 — Static data join</h1>
+    <p class="lead">Nine objects with hand-picked pixel coordinates joined to nine circles via <code>selectAll → data → join("circle")</code>. <a href="../../09b-data-driven-svg.html">Source tutorial &rarr;</a></p>
+
+    <div id="canvas"></div>
+    <script>
+        const dataset = [
+            { x: 100, y: 80, value: 20 },
+            { x: 200, y: 150, value: 15 },
+            { x: 300, y: 100, value: 25 },
+            { x: 400, y: 200, value: 10 },
+            { x: 500, y: 80, value: 30 },
+            { x: 150, y: 250, value: 18 },
+            { x: 250, y: 180, value: 12 },
+            { x: 350, y: 150, value: 22 },
+            { x: 450, y: 120, value: 16 }
+        ];
+
+        const c = makeCanvas("#canvas", 380, {
+            showPlotArea: true,
+            margin: { top: 30, right: 30, bottom: 30, left: 30 }
+        });
+
+        c.plot.selectAll("circle")
+            .data(dataset)
+            .join("circle")
+            .attr("cx", d => d.x)
+            .attr("cy", d => d.y)
+            .attr("r", d => d.value)
+            .attr("fill", "steelblue")
+            .attr("stroke", "black")
+            .attr("stroke-width", 1)
+            .attr("opacity", 0.7);
+    </script>
+</body>
+</html>

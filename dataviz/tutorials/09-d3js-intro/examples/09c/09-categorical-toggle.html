@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>09c — linear / log / band toggle</title>
+    <style>
+      h1 { font-size: 1.4em; margin-bottom: 0.3em; }
+      .lead { color: #555; margin-top: 0; }
+      .lead a { color: #0072B2; }
+        body { max-width: 1100px; margin: 2em auto; padding: 0 1.5em;
+             line-height: 1.55; color: #222; font-size: 16px;
+             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        svg { width: 100%; height: auto; max-width: 100%; display: block;
+             border: 1px solid #ddd; background: white; }
+        .axis text { font-size: 13px; fill: #555; }
+        .axis path, .axis line { stroke: #bbb; }
+        label { margin-right: 1em; font-size: 0.95em; }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="../_shared/utils.js"></script>
+</head>
+<body>
+    <h1>09c §7 — Linear / log / band toggle</h1>
+    <p class="lead">Same nine-point dataset rendered three ways via radio buttons; the y-scale stays linear, the x-scale swaps between linear, log, and band. <a href="../../09c-scales-and-axes.html">Source tutorial &rarr;</a></p>
+
+    <p>
+        <label><input type="radio" name="scaleType" value="linear" checked> linear (scatter)</label>
+        <label><input type="radio" name="scaleType" value="log"> log (scatter)</label>
+        <label><input type="radio" name="scaleType" value="band"> band (bar chart)</label>
+    </p>
+    <div id="vis"></div>
+    <script>
+        const dataset = [
+            { x: 10, y: 20 }, { x: 20, y: 35 }, { x: 30, y: 15 },
+            { x: 40, y: 25 }, { x: 50, y: 45 }, { x: 60, y: 30 },
+            { x: 70, y: 40 }, { x: 80, y: 10 }, { x: 90, y: 50 }
+        ];
+        const PALETTE = ["#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7",
+                         "#56B4E9", "#B8860B", "#7F3C8D", "#11A579"];
+        const colorPos = d3.scaleOrdinal().domain(d3.range(dataset.length)).range(PALETTE);
+
+        function render(type) {
+            d3.select("#vis").html("");
+            const c = makeCanvas("#vis", 360);
+
+            let x;
+            if (type === "band") {
+                x = d3.scaleBand().domain(dataset.map(d => d.x))
+                    .range([0, c.innerW]).padding(0.2);
+            } else if (type === "log") {
+                x = d3.scaleLog().domain(d3.extent(dataset, d => d.x)).range([0, c.innerW]);
+            } else {
+                x = d3.scaleLinear().domain([0, d3.max(dataset, d => d.x)]).nice().range([0, c.innerW]);
+            }
+            const y = d3.scaleLinear()
+                .domain([0, d3.max(dataset, d => d.y)]).nice()
+                .range([c.innerH, 0]);
+
+            c.plot.append("g").attr("transform", `translate(0, ${c.innerH})`).call(d3.axisBottom(x));
+            c.plot.append("g").call(d3.axisLeft(y));
+
+            if (type === "band") {
+                c.plot.selectAll("rect.bar").data(dataset).join("rect")
+                    .attr("class", "bar")
+                    .attr("x", d => x(d.x)).attr("y", d => y(d.y))
+                    .attr("width", x.bandwidth()).attr("height", d => c.innerH - y(d.y))
+                    .attr("fill", (d, i) => colorPos(i)).attr("opacity", 0.8);
+            } else {
+                c.plot.selectAll("circle").data(dataset).join("circle")
+                    .attr("cx", d => x(d.x)).attr("cy", d => y(d.y))
+                    .attr("r", 7).attr("fill", (d, i) => colorPos(i)).attr("opacity", 0.85);
+            }
+        }
+        render("linear");
+        document.querySelectorAll('input[name="scaleType"]').forEach(r =>
+            r.addEventListener("change", e => render(e.target.value)));
+    </script>
+</body>
+</html>

@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <title>09e — First Scatterplot</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="./_shared/chart.js"></script>
+    <script src="./_shared/chart.js?v=3"></script>
     <link rel="stylesheet" href="./_shared/chart.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/styles/github.min.css">
     <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/highlight.min.js"></script>
@@ -17,6 +17,19 @@
     <p class="lead">Gapminder scatterplot, end-to-end: GDP per capita on a log axis, life expectancy on the y-axis,
         size by population, color by continent. Selections, scales, axes, data join, legend, and tooltips, in
         about 70 lines of D3.</p>
+
+    <h2>How this tutorial is organised</h2>
+    <p>The chart is built in six visible steps, each on top of the previous one. The finished
+        result is shown at the top of the page so you know where the build is heading; then we
+        rewind to step 1.</p>
+    <ol>
+        <li><strong>Step 1 — margin convention.</strong> SVG with an inner plot-area group.</li>
+        <li><strong>Step 2 — load and parse the data.</strong> CSV with accessor, filter to 2007.</li>
+        <li><strong>Step 3 — define the four scales.</strong> Log x, linear y, sqrt radius, ordinal colour.</li>
+        <li><strong>Step 4 — canvas and axes.</strong> First visible marks: the two axes.</li>
+        <li><strong>Step 5 — the data join.</strong> One <code>&lt;circle&gt;</code> per country, four channels each.</li>
+        <li><strong>Step 6 — title, legend, tooltips.</strong> Polish that turns the scatter into a chart.</li>
+    </ol>
 
     <h2>The finished chart</h2>
     <div class="container" id="chart-final"></div>
@@ -148,8 +161,18 @@ items.append("text").attr("x", 14).attr("y", 4).text(d =&gt; d);</code></pre>
     <div class="note"><strong>Takeaway.</strong> A complete, publication-quality scatterplot in ~70 lines of
         D3, every line traceable to a concept introduced in 09a–09d.</div>
 
+    <h2>References</h2>
+    <ul>
+        <li><a href="https://observablehq.com/@d3/scatterplot" target="_blank">Observable —
+            Scatterplot</a> · <a href="https://observablehq.com/@d3/bubble-chart"
+            target="_blank">Bubble chart</a> — Mike Bostock's canonical versions.</li>
+        <li><a href="https://www.gapminder.org/" target="_blank">Gapminder.org</a> — the dataset
+            and Hans Rosling's original moving-bubble visualisation.</li>
+    </ul>
+
     <p class="tutorial-nav"><a href="09d-loading-data.html">← 09d — Loading Data</a> ·
-        <a href="index.html">L9 index</a></p>
+        <a href="index.html">L9 index</a> ·
+        <a href="../10-d3js-shapes-layouts/index.html">L10 — Advanced D3 →</a></p>
 
     <script>
         const CHART_OPTS = {
@@ -176,9 +199,6 @@ items.append("text").attr("x", 14).attr("y", 4).text(d =&gt; d);</code></pre>
             const r = d3.scaleSqrt()
                 .domain(d3.extent(data, d => d.pop)).range([3, 32]);
             const color = d3.scaleOrdinal().domain(continents).range(palette);
-
-            // Each step renders into its own canvas, accumulating state.
-            // Steps 2 and 3 produce no visible change so they don't get their own canvas.
 
             // ---------- helpers ----------
             function drawAxes(c) {
