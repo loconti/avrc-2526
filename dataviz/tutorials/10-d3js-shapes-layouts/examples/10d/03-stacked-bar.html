@@ -1,21 +1,47 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>10d §6 — stacked bar chart</title>
     <style>
-        body { max-width: 1100px; margin: 2em auto; padding: 0 1.5em;
-            line-height: 1.55; color: #222; font-size: 16px;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        h1 { font-size: 1.4em; margin-bottom: 0.3em; }
-        .lead { color: #555; margin-top: 0; }
-        svg { width: 100%; height: auto; max-width: 100%; display: block;
-            border: 1px solid #ddd; background: #fafafa; }
-        a { color: #0072B2; }
+        body {
+            max-width: 1100px;
+            margin: 2em auto;
+            padding: 0 1.5em;
+            line-height: 1.55;
+            color: #222;
+            font-size: 16px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        h1 {
+            font-size: 1.4em;
+            margin-bottom: 0.3em;
+        }
+
+        .lead {
+            color: #555;
+            margin-top: 0;
+        }
+
+        svg {
+            width: 100%;
+            height: auto;
+            max-width: 100%;
+            display: block;
+            border: 1px solid #ddd;
+            background: #fafafa;
+        }
+
+        a {
+            color: #0072B2;
+        }
     </style>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="../_shared/utils.js"></script>
 </head>
+
 <body>
     <h1>10d §6 — Stacked bar chart</h1>
     <p class="lead">Five years × three fruit categories. <code>d3.stack()</code> turns the wide
@@ -23,7 +49,8 @@
         layers to <code>&lt;g&gt;</code> elements and each layer's segments to
         <code>&lt;rect&gt;</code> children. Colour is set once on the parent <code>&lt;g&gt;</code>
         and inherited by every rect inside.
-        <a href="../../10d-examples-gallery.html">Source tutorial &rarr;</a></p>
+        <a href="../../10d-examples-gallery.html">Source tutorial &rarr;</a>
+    </p>
 
     <div id="demo"></div>
     <script>
@@ -36,9 +63,9 @@
         // ─── 2. Data — one row per year, one column per series ──────────────
         // This is "wide" format: each row already contains all three series.
         const data = [
-            { year: 2018, apples: 10, bananas: 20, cherries:  5 },
-            { year: 2019, apples: 12, bananas: 18, cherries:  8 },
-            { year: 2020, apples: 15, bananas: 22, cherries:  6 },
+            { year: 2018, apples: 10, bananas: 20, cherries: 5 },
+            { year: 2019, apples: 12, bananas: 18, cherries: 8 },
+            { year: 2020, apples: 15, bananas: 22, cherries: 6 },
             { year: 2021, apples: 17, bananas: 24, cherries: 10 },
             { year: 2022, apples: 14, bananas: 21, cherries: 12 }
         ];
@@ -56,7 +83,7 @@
         //   series[1][0]   → [10, 30]   for year 2018  (bananas stacked on top of apples)
         //   series[2][0]   → [30, 35]   for year 2018  (cherries stacked on top of bananas)
         //   series[0][0].data → { year: 2018, apples: 10, bananas: 20, cherries: 5 }
-        const stack  = d3.stack().keys(keys);
+        const stack = d3.stack().keys(keys);
         const series = stack(data);
 
         // ─── 4. Scales ───────────────────────────────────────────────────────
@@ -98,16 +125,16 @@
         c.plot.selectAll("g.layer")
             .data(series)
             .join("g")
-                .attr("class", "layer")
-                .attr("fill", d => color(d.key))
+            .attr("class", "layer")
+            .attr("fill", d => color(d.key))
             .selectAll("rect")
-                .data(d => d)                          // each entry is a [y0, y1] segment
-                .join("rect")
-                    .attr("x",      d => x(d.data.year))
-                    .attr("y",      d => y(d[1]))      // top of the segment
-                    .attr("height", d => y(d[0]) - y(d[1]))   // top − bottom
-                    .attr("width",  x.bandwidth())
-                    .attr("opacity", 0.9);
+            .data(d => d)                          // each entry is a [y0, y1] segment
+            .join("rect")
+            .attr("x", d => x(d.data.year))
+            .attr("y", d => y(d[1]))      // top of the segment
+            .attr("height", d => y(d[0]) - y(d[1]))   // top − bottom
+            .attr("width", x.bandwidth())
+            .attr("opacity", 0.9);
 
         // ─── 7. Legend (in the right margin, outside the plot area) ─────────
         const legend = c.plot.append("g")
@@ -129,4 +156,5 @@
         });
     </script>
 </body>
+
 </html>
