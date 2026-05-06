@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>10a — Update Pattern and selection.join</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="./_shared/chart.js?v=3"></script>
+    <link rel="stylesheet" href="./_shared/chart.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/styles/github.min.css">
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/highlight.min.js"></script>
+    <script>document.addEventListener("DOMContentLoaded", () => hljs.highlightAll());</script>
+</head>
+
+<body>
+    <h1>10a — Update Pattern and <code>selection.join</code></h1>
+    <p class="lead">L9 finished with a chart that draws once. The first thing that turns a static
+        chart into a living one is making it <em>respond when the data updates</em> — the user
+        sorts, filters, scrubs a slider, switches a year. In 09b you used <code>.join("circle")</code>
+        to draw a chart once; now we call the same code again with a <em>different</em> data array
+        and let D3 figure out the diff. Two new ideas make that work: <strong>key functions</strong>
+        (so D3 tracks each datum across calls) and <strong>custom enter / update / exit
+        callbacks</strong> (so you can style each sub-selection differently). This is the
+        foundation for every dynamic chart in the rest of L10.</p>
+
+    <h2>How this tutorial is organised</h2>
+    <p>Three blocks, in order:</p>
+    <ol>
+        <li><strong>The two forms of the update pattern</strong> (§1-§2). The historical
+            <code>enter().merge(...)</code> form first, then the modern
+            <code>selection.join</code> shortcut that supersedes it.</li>
+        <li><strong>What changes when data is re-bound</strong> (§3-§4). Why a
+            <em>key function</em> matters (a side-by-side index-vs-key demo on the same data),
+            and how the three-callback form of <code>.join</code> lets you style enter / update /
+            exit independently.</li>
+        <li><strong>The pattern in production</strong> (§5). A sortable bar chart of the world's
+            most populous countries built up in two visible steps — first with an index join (the
+            failure mode visible on a real chart), then with a key join.</li>
+    </ol>
+
+    <h2>1. The older explicit pattern</h2>
+    <p>Before <code>selection.join</code> was added (D3 v5.8, early 2019), every update wrote the
+        three sub-selections by hand. You will still see this form in older examples:</p>
+    <pre><code>// older pattern — three sub-selections, .merge() to combine enter+update
+const sel = svg.selectAll("circle").data(data, d =&gt; d.id);
+
+sel.exit().remove();                         // 1. remove old
+
+sel.enter()                                   // 2. create new
+    .append("circle")
+    .attr("fill", "steelblue")
+  .merge(sel)                                 // 3. enter + update together
+    .attr("cx", d =&gt; x(d.value))
+    .attr("cy", d =&gt; y(d.group))
+    .attr("r", 5);</code></pre>
+    <p>The pattern works but is verbose. <code>selection.join</code> is the modern shortcut.</p>
+
+    <h2>2. <code>.join()</code> on the second call</h2>
+    <p>The same <code>.join("circle")</code> you used in 09b does the right thing automatically when you
+        re-bind it with a different array. Modern code rarely calls the explicit form above:</p>
+    <pre><code>function render(data) {
+    svg.selectAll("circle")
+        .data(data, d =&gt; d.id)             // re-bind — D3 diffs against the existing DOM
+        .join("circle")                     // creates / keeps / removes to match
+            .attr("cx", d =&gt; x(d.value))
+            .attr("cy", d =&gt; y(d.group))
+            .attr("r", 5);
+}
+
+render(initialData);
+render(filteredData);                       // same join, new picture
+render(sortedData);                         // again — every call diffs from the previous DOM</code></pre>
+    <p>The single change vs. 09b: passing a <em>second argument</em> to <code>.data()</code> — the key
+        function. Without it, the next section's reshuffle demo gives the wrong picture.</p>
+
+    <h2>3. Keys preserve object identity</h2>
+    <p>The second argument to <code>.data()</code> is the <strong>key function</strong>:</p>
+    <pre><code>.data(data, d =&gt; d.id)</code></pre>
+    <p>Without a key, D3 matches data to elements <strong>by index</strong>. That is fine for a one-shot
+        chart, but breaks the moment the data is sorted, filtered, or shuffled — D3 thinks the first row
+        always corresponds to the first DOM element, even after a sort.</p>
+    <p>Two charts of the same five items, one shuffle button. The <strong>only difference</strong>
+        between them is the second argument to <code>.data()</code>: the left chart uses an
+        <strong>index join</strong> (no key), the right uses a <strong>key join</strong>
+        (<code>d =&gt; d.id</code>). Click <em>Shuffle the data</em> a few times and watch each
+        circle's colour:</p>
+    <p><button id="shuffle-btn">Shuffle the data</button></p>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1em; margin: 0.6em 0;">
+        <figure style="margin: 0;">
+            <figcaption style="font-size: var(--text-md); color: #555; margin-bottom: 0.4em;">
+                <strong>Index join</strong> — <code>.data(data)</code><br>
+                <span style="color: #888;">colours stay glued to positions; labels move</span>
+            </figcaption>
+            <div class="container" id="demo-keys-index"></div>
+        </figure>
+        <figure style="margin: 0;">
+            <figcaption style="font-size: var(--text-md); color: #555; margin-bottom: 0.4em;">
+                <strong>Key join</strong> — <code>.data(data, d =&gt; d.id)</code><br>
+                <span style="color: #888;">circles slide to their new slots; each letter keeps its colour</span>
+            </figcaption>
+            <div class="container" id="demo-keys-key"></div>
+        </figure>
+    </div>
+    <p>The trick is in how the colour is set. <code>fill</code> is assigned <em>once</em> at enter,
+        using the datum bound at that moment. With the index join, the bound datum changes on every
+        rebind but the existing element keeps its initial fill — so the colour stays welded to a slot.
+        With the key join, each element keeps the same datum across rebinds, so its colour stays welded
+        to the letter (the datum's identity).</p>
+
+    <h2>4. Custom join behaviour — three callbacks</h2>
+    <p>For richer behaviour, <code>.join</code> accepts three callbacks — one per sub-selection:</p>
+    <pre><code>selection.data(data, d =&gt; d.id)
+    .join(
+        enter  =&gt; enter.append("circle")
+            .attr("r", 0)                                          // start invisible
+            .attr("fill", "#009E73")                               // green for new
+            .call(en =&gt; en.transition().duration(400)
+                .attr("r", 6)),                                    // grow into place
+
+        update =&gt; update
+            .attr("fill", "#0072B2"),                              // blue for kept
+
+        exit   =&gt; exit
+            .attr("fill", "#D55E00")
+            .call(ex =&gt; ex.transition().duration(300)
+                .attr("r", 0).remove())                            // shrink and go
+    );</code></pre>
+    <p>Each callback returns a selection. D3 merges <code>enter</code>'s return value with the update
+        selection automatically, so subsequent <code>.attr</code> calls on the result of <code>.join(...)</code>
+        run on both new and kept elements.</p>
+    <p>The demo below uses this exact form — entering circles fade in green, updating circles stay blue,
+        exiting circles flash orange before shrinking out:</p>
+    <p>
+        <button id="cycle-btn">Cycle dataset (5 → 8 → 5 → 8 …)</button>
+    </p>
+    <div class="container" id="demo-custom-join"></div>
+
+    <h2>5. A sortable bar chart — the join in production</h2>
+    <p>Top-15 most populous countries (UN 2023). Click the dropdown to sort by name or by
+        population. We build it in two visible steps — first with an index join so the
+        failure mode from §3 is unmistakable on a real chart, then with a key join that fixes it.
+        <code>10b</code> will pick up where step 2 leaves off and add the missing transition.</p>
+
+    <h3>Step 1 — the static bar chart (no key, no transition)</h3>
+    <p>Start from a plain horizontal bar chart. The bars are bound by <em>index</em> (no key
+        function), and the sort dropdown calls a render function that re-sorts the data and updates
+        the band scale. <code>fill</code> is set <em>once on enter</em> — exactly as in the §3
+        keys demo — so the colour is the visible identity carried by each DOM element. No
+        transition: bars jump to their new <code>y</code> instantly:</p>
+    <pre><code>function render() {
+    data.sort(currentSort);
+    y.domain(data.map(d =&gt; d.country));        // band scale follows the new order
+
+    svg.selectAll("rect")
+        .data(data)                              // ← no key: bound by INDEX
+        .join(
+            enter =&gt; enter.append("rect")
+                .attr("x", 0)
+                .attr("height", y.bandwidth())
+                .attr("fill", d =&gt; colour(d.value))   // ← set ONCE on enter
+                .attr("y",     d =&gt; y(d.country))
+                .attr("width", d =&gt; x(d.value)),
+            update =&gt; update,
+            exit   =&gt; exit.remove()
+        )
+        .attr("y",     d =&gt; y(d.country))           // re-applied every render
+        .attr("width", d =&gt; x(d.value));
+}</code></pre>
+    <p>Sort works — but watch the colours: each <em>position</em> keeps its colour, so the bar at
+        row 1 keeps the dark-blue it inherited on the first render, even when the country at row 1
+        is now Bangladesh (small population — should be light blue). This is the index-join
+        failure mode from §3 on a real chart:</p>
+    <p><label>sort by
+        <select id="sort1">
+            <option value="value-desc">population (desc)</option>
+            <option value="value-asc">population (asc)</option>
+            <option value="name-asc">country A → Z</option>
+            <option value="name-desc">country Z → A</option>
+        </select></label></p>
+    <div class="container" id="demo-sortable-step1"></div>
+
+    <h3>Step 2 — add a key function</h3>
+    <p>Single change: pass <code>d =&gt; d.country</code> as the second argument to <code>.data()</code>.
+        Now each bar tracks its country across sorts — colours follow countries, not positions:</p>
+    <pre><code>svg.selectAll("rect")
+    .data(data, d =&gt; d.country)                 // ← KEY: each bar tracks its country
+    .join("rect")
+        .attr("y",      d =&gt; y(d.country))
+        .attr("width",  d =&gt; x(d.value))
+        .attr("height", y.bandwidth());</code></pre>
+    <p>Sort again — the colours move <em>with</em> the bars now, but they jump instantly. We can read
+        the result, just not the motion:</p>
+    <p><label>sort by
+        <select id="sort2">
+            <option value="value-desc">population (desc)</option>
+            <option value="value-asc">population (asc)</option>
+            <option value="name-asc">country A → Z</option>
+            <option value="name-desc">country Z → A</option>
+        </select></label></p>
+    <div class="container" id="demo-sortable-step2"></div>
+
+    <p>Step 2 gives the right <em>result</em> but the bars jump instantly. Following each country
+        across the sort with the eye is hard. The missing ingredient is animation — and that is the
+        whole subject of <code>10b</code>.</p>
+
+    <div class="note"><strong>Takeaway.</strong> Every D3 chart that responds to change runs the
+        same three steps: bind the new data with a <em>key function</em>, call <code>.join</code>,
+        and let it create / keep / remove elements. For differentiated entry/exit, pass three
+        callbacks. <code>10b</code> picks up where Step 2 leaves off and adds
+        <strong>transitions</strong> on top of the same join.</div>
+
+    <h2>References</h2>
+    <ul>
+        <li><a href="https://observablehq.com/@d3/sortable-bar-chart" target="_blank">Observable —
+            Sortable bar chart</a></li>
+        <li><a href="https://observablehq.com/@d3/selection-join" target="_blank">Observable —
+            <code>selection.join</code></a></li>
+        <li><a href="https://observablehq.com/@d3/general-update-pattern" target="_blank">Observable —
+            General Update Pattern</a> (the historical three-sub-selection form)</li>
+    </ul>
+
+    <p class="tutorial-nav"><a href="../09-d3js-intro/09e-first-scatterplot.html">← 09e — First scatterplot</a> ·
+        <a href="index.html">L10 index</a> ·
+        <a href="10b-transitions.html">10b — Transitions →</a></p>
+
+    <script>
+        // ============================================================
+        // §3. Key vs index join
+        // ============================================================
+        {
+            const labels = ["A", "B", "C", "D", "E"];
+            const baseColors = {
+                A: "#0072B2", B: "#E69F00", C: "#009E73", D: "#D55E00", E: "#CC79A7"
+            };
+            let order = [...labels];
+
+            // Build a single chart and return its render function.
+            // useKey: true → key join; false → index join.
+            function buildKeysChart(selector, useKey) {
+                const c = makeCanvas(selector, 180, { margin: { top: 20, right: 20, bottom: 20, left: 20 } });
+                const yMid = c.innerH / 2;
+                const slot = i => 30 + i * (c.innerW - 60) / 4;
+
+                return function render() {
+                    const data = order.map(label => ({ id: label, label }));
+                    const sel = c.plot.selectAll("g.item")
+                        .data(data, useKey ? (d => d.id) : null);
+
+                    sel.exit().transition().duration(300).attr("opacity", 0).remove();
+
+                    const enter = sel.enter().append("g").attr("class", "item").attr("opacity", 1);
+                    enter.append("circle")
+                        .attr("r", 22)
+                        .attr("stroke", "white").attr("stroke-width", 2)
+                        .attr("fill", d => baseColors[d.label]);
+                    enter.append("text")
+                        .attr("text-anchor", "middle").attr("dy", 5)
+                        .style("font-size", "16px").style("font-weight", "bold")
+                        .attr("fill", "white");
+
+                    sel.merge(enter)
+                        .transition().duration(500)
+                        .attr("transform", (d, i) => `translate(${slot(i)}, ${yMid})`);
+                    sel.merge(enter).select("text").text(d => d.label);
+                };
+            }
+
+            const renderIndex = buildKeysChart("#demo-keys-index", false);
+            const renderKey   = buildKeysChart("#demo-keys-key",   true);
+            renderIndex();
+            renderKey();
+
+            document.getElementById("shuffle-btn").addEventListener("click", () => {
+                order = d3.shuffle([...order]);
+                renderIndex();
+                renderKey();
+            });
+        }
+
+        // ============================================================
+        // §4. Custom join behaviour
+        // ============================================================
+        const cCustom = makeCanvas("#demo-custom-join", 200, { margin: { top: 30, bottom: 30 } });
+        const allIds = d3.range(1, 11);   // 1..10 are possible
+        let visibleSet = new Set([1, 2, 3, 4, 5]);
+
+        function renderCustom() {
+            const data = allIds.filter(id => visibleSet.has(id)).map(id => ({ id }));
+            const slotW = cCustom.innerW / 10;
+            const yC = cCustom.innerH / 2;
+
+            cCustom.plot.selectAll("circle")
+                .data(data, d => d.id)
+                .join(
+                    enter => enter.append("circle")
+                        .attr("cx", d => slotW * (d.id - 0.5))
+                        .attr("cy", yC)
+                        .attr("r", 0)
+                        .attr("fill", "#009E73")             // green for entering
+                        .attr("opacity", 0.85)
+                        .call(en => en.transition().duration(400).attr("r", 18)),
+                    update => update
+                        .attr("fill", "#0072B2"),            // blue for kept
+                    exit => exit
+                        .attr("fill", "#D55E00")             // orange for exiting
+                        .call(ex => ex.transition().duration(300).attr("r", 0).remove())
+                );
+
+            cCustom.plot.selectAll("text.id")
+                .data(data, d => d.id)
+                .join(
+                    enter => enter.append("text").attr("class", "id")
+                        .attr("x", d => slotW * (d.id - 0.5))
+                        .attr("y", yC + 4)
+                        .attr("text-anchor", "middle")
+                        .style("font-size", "var(--text-sm)").style("font-weight", "bold")
+                        .attr("fill", "white").attr("opacity", 0)
+                        .text(d => d.id)
+                        .call(en => en.transition().duration(400).attr("opacity", 1)),
+                    update => update,
+                    exit => exit.transition().duration(300).attr("opacity", 0).remove()
+                );
+        }
+        renderCustom();
+        document.getElementById("cycle-btn").addEventListener("click", () => {
+            // alternate between {1..5} and {3..10}
+            visibleSet = visibleSet.has(1)
+                ? new Set([3, 4, 5, 6, 7, 8, 9, 10])
+                : new Set([1, 2, 3, 4, 5]);
+            renderCustom();
+        });
+
+        // ============================================================
+        // §5. Sortable bar chart
+        // ============================================================
+        {
+            const countries = [
+                { country: "India",         value: 1428.6 },
+                { country: "China",         value: 1425.7 },
+                { country: "United States", value:  339.9 },
+                { country: "Indonesia",     value:  277.5 },
+                { country: "Pakistan",      value:  240.5 },
+                { country: "Nigeria",       value:  223.8 },
+                { country: "Brazil",        value:  216.4 },
+                { country: "Bangladesh",    value:  173.0 },
+                { country: "Russia",        value:  144.4 },
+                { country: "Mexico",        value:  128.5 },
+                { country: "Ethiopia",      value:  126.5 },
+                { country: "Japan",         value:  123.3 },
+                { country: "Philippines",   value:  117.3 },
+                { country: "Egypt",         value:  112.7 },
+                { country: "DR Congo",      value:  102.3 }
+            ];
+            const sortFns = {
+                "value-desc": (a, b) => d3.descending(a.value, b.value),
+                "value-asc":  (a, b) => d3.ascending(a.value, b.value),
+                "name-asc":   (a, b) => d3.ascending(a.country, b.country),
+                "name-desc":  (a, b) => d3.descending(a.country, b.country)
+            };
+            const sortOpts = { margin: { top: 20, right: 90, bottom: 20, left: 130 } };
+            const colour = d3.scaleSequential(d3.interpolateBlues)
+                .domain([0, d3.max(countries, d => d.value)]);
+
+            // helper: build a sortable bar chart.
+            // mode: "index" (no key) or "key" (key function on country).
+            function buildSortable(selector, dropdownId, mode) {
+                const data = countries.slice();
+                const c = makeCanvas(selector, 460, sortOpts);
+                const x = d3.scaleLinear().range([0, c.innerW]);
+                const y = d3.scaleBand().range([0, c.innerH]).padding(0.18);
+                const xAxisG = c.plot.append("g").attr("class", "axis")
+                    .attr("transform", `translate(0, ${c.innerH})`);
+                const yAxisG = c.plot.append("g").attr("class", "axis");
+                x.domain([0, d3.max(data, d => d.value)]).nice();
+
+                function render() {
+                    const sortKey = document.getElementById(dropdownId).value;
+                    data.sort(sortFns[sortKey]);
+                    y.domain(data.map(d => d.country));
+
+                    const useKey = (mode === "key");
+
+                    const bars = c.plot.selectAll("rect.bar")
+                        .data(data, useKey ? (d => d.country) : null)
+                        .join(
+                            enter => enter.append("rect")
+                                .attr("class", "bar")
+                                .attr("x", 0)
+                                .attr("height", y.bandwidth())
+                                .attr("fill", d => colour(d.value))
+                                .attr("y", d => y(d.country))
+                                .attr("width", d => x(d.value)),
+                            update => update,
+                            exit => exit.remove()
+                        );
+                    bars
+                        .attr("y", d => y(d.country))
+                        .attr("width", d => x(d.value));
+
+                    const labels = c.plot.selectAll("text.value")
+                        .data(data, useKey ? (d => d.country) : null)
+                        .join(
+                            enter => enter.append("text")
+                                .attr("class", "value")
+                                .attr("text-anchor", "start")
+                                .attr("dy", 4)
+                                .style("font-size", "var(--text-md)")
+                                .style("fill", "#444")
+                                .attr("x", d => x(d.value) + 6)
+                                .attr("y", d => y(d.country) + y.bandwidth() / 2),
+                            update => update,
+                            exit => exit.remove()
+                        );
+                    labels.text(d => d3.format(",.1f")(d.value) + " M")
+                        .attr("x", d => x(d.value) + 6)
+                        .attr("y", d => y(d.country) + y.bandwidth() / 2);
+
+                    xAxisG.call(d3.axisBottom(x).ticks(6).tickFormat(d3.format(",.0f")));
+                    yAxisG.call(d3.axisLeft(y).tickSizeOuter(0));
+                }
+
+                render();
+                document.getElementById(dropdownId).addEventListener("change", render);
+            }
+
+            buildSortable("#demo-sortable-step1", "sort1", "index");
+            buildSortable("#demo-sortable-step2", "sort2", "key");
+        }
+    </script>
+</body>
+
+</html>

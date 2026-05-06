@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>10c §4 — click to toggle a selection</title>
+    <style>
+        body { max-width: 1100px; margin: 2em auto; padding: 0 1.5em;
+            line-height: 1.55; color: #222; font-size: 16px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        h1 { font-size: 1.4em; margin-bottom: 0.3em; }
+        .lead { color: #555; margin-top: 0; }
+        .lead a { color: #0072B2; }
+        svg { width: 100%; height: auto; max-width: 100%; display: block;
+            border: 1px solid #ddd; background: #fafafa; }
+        .axis text { font-size: 13px; fill: #555; }
+        .axis path, .axis line { stroke: #bbb; }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="../_shared/utils.js"></script>
+</head>
+<body>
+    <h1>10c §4 — Click to toggle a selection</h1>
+    <p class="lead">Click any country to select it (thick black ring, every other circle dims);
+        click the same one again, or click the empty background, to clear. State lives in one
+        variable — the canonical event → state → render loop.
+        <a href="../../10c-interactions-capstone.html">Source tutorial &rarr;</a></p>
+
+    <div id="chart"></div>
+
+    <script>
+        // ─────────────────────────────────────────────────────────────────────
+        const c = makeCanvas("#chart", 460, {
+            margin: { top: 20, right: 30, bottom: 50, left: 60 }
+        });
+
+        // single piece of state — country name or null
+        let selected = null;
+
+        d3.csv("../../datasets/gapminder.csv", d => ({
+            country:    d.country,
+            continent:  d.continent,
+            year:      +d.year,
+            lifeExp:   +d.lifeExp,
+            pop:       +d.pop,
+            gdpPercap: +d.gdpPercap
+        })).then(rows => {
+            const data = rows.filter(d => d.year === 2007);
+
+            const x = d3.scaleLog()
+                .domain(d3.extent(data, d => d.gdpPercap))
+                .nice()
+                .range([0, c.innerW]);
+            const y = d3.scaleLinear()
+                .domain(d3.extent(data, d => d.lifeExp))
+                .nice()
+                .range([c.innerH, 0]);
+            const r = d3.scaleSqrt()
+                .domain(d3.extent(data, d => d.pop))
+                .range([3, 22]);
+            const colour = d3.scaleOrdinal()
+                .domain([...new Set(data.map(d => d.continent))])
+                .range(d3.schemeTableau10);
+
+            c.plot.append("g")
+                .attr("class", "axis")
+                .attr("transform", `translate(0, ${c.innerH})`)
+                .call(d3.axisBottom(x).ticks(6, "~s"));
+            c.plot.append("g")
+                .attr("class", "axis")
+                .call(d3.axisLeft(y));
+
+            // render reads `selected` and produces the appropriate visuals
+            function render() {
+                c.plot.selectAll("circle.country")
+                    .data(data, d => d.country)
+                    .join("circle")
+                        .attr("class",        "country")
+                        .attr("cx",           d => x(d.gdpPercap))
+                        .attr("cy",           d => y(d.lifeExp))
+                        .attr("r",            d => r(d.pop))
+                        .attr("fill",         d => colour(d.continent))
+                        .attr("stroke",       d => d.country === selected ? "#1a1a1a" : "white")
+                        .attr("stroke-width", d => d.country === selected ? 3 : 1)
+                        .attr("opacity",      d => selected && d.country !== selected ? 0.15 : 0.85)
+                        .style("cursor",      "pointer")
+                        .on("click", (event, d) => {
+                            // stop propagation so the SVG-level background-clear handler does not fire
+                            event.stopPropagation();
+                            selected = (selected === d.country) ? null : d.country;
+                            render();
+                        });
+            }
+            render();
+
+            // background click on the SVG (anywhere not a country circle) clears the selection
+            c.root.on("click", event => {
+                if (event.target.tagName !== "circle" || !event.target.classList.contains("country")) {
+                    if (selected !== null) {
+                        selected = null;
+                        render();
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

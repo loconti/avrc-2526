@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>10c §5 — year slider with smooth transition</title>
+    <style>
+        body { max-width: 1100px; margin: 2em auto; padding: 0 1.5em;
+            line-height: 1.55; color: #222; font-size: 16px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        h1 { font-size: 1.4em; margin-bottom: 0.3em; }
+        .lead { color: #555; margin-top: 0; }
+        .lead a { color: #0072B2; }
+        svg { width: 100%; height: auto; max-width: 100%; display: block;
+            border: 1px solid #ddd; background: #fafafa; }
+        .controls { margin: 1em 0 0.5em; }
+        .controls label { display: inline-block; min-width: 8em; }
+        #year { width: 320px; vertical-align: middle; }
+        .axis text { font-size: 13px; fill: #555; }
+        .axis path, .axis line { stroke: #bbb; }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="../_shared/utils.js"></script>
+</head>
+<body>
+    <h1>10c §5 — Year slider with smooth transition</h1>
+    <p class="lead">A keyed data join driven by a range slider. Each tick of the slider updates
+        the current year in state; the render function rebuilds against that year's rows; a shared
+        450 ms transition glides every circle to its new <code>cx</code> / <code>cy</code> /
+        <code>r</code>. Drag fast and D3 interrupts cleanly.
+        <a href="../../10c-interactions-capstone.html">Source tutorial &rarr;</a></p>
+
+    <p class="controls">
+        <label>Year: <span id="year-display">1952</span></label>
+        <input type="range" id="year" min="1952" max="2007" step="5" value="1952">
+    </p>
+    <div id="chart"></div>
+
+    <script>
+        // ─────────────────────────────────────────────────────────────────────
+        const continents = ["Africa", "Americas", "Asia", "Europe", "Oceania"];
+        const palette    = ["#009E73", "#D55E00", "#0072B2", "#CC79A7", "#E69F00"];
+        const colorOf    = d3.scaleOrdinal()
+            .domain(continents)
+            .range(palette);
+
+        const c = makeCanvas("#chart", 460, {
+            margin: { top: 20, right: 30, bottom: 50, left: 60 }
+        });
+
+        // state — year (number) and a flag to skip the transition on the first frame
+        let allData = [];
+        let currentYear = 1952;
+        let firstRender = true;
+
+        // scales (domain set after the CSV loads; range fixed in pixels / colours)
+        const x = d3.scaleLog().range([0, c.innerW]);
+        const y = d3.scaleLinear().range([c.innerH, 0]);
+        const r = d3.scaleSqrt().range([3, 22]);
+
+        const xAxisG = c.plot.append("g")
+            .attr("class", "axis")
+            .attr("transform", `translate(0, ${c.innerH})`);
+        const yAxisG = c.plot.append("g")
+            .attr("class", "axis");
+
+        d3.csv("../../datasets/gapminder.csv", d => ({
+            country:    d.country,
+            continent:  d.continent,
+            year:      +d.year,
+            lifeExp:   +d.lifeExp,
+            pop:       +d.pop,
+            gdpPercap: +d.gdpPercap
+        })).then(rows => {
+            allData = rows;
+            // freeze scale domains across all years so axes don't jump while scrubbing
+            x.domain(d3.extent(allData, d => d.gdpPercap)).nice();
+            y.domain(d3.extent(allData, d => d.lifeExp)).nice();
+            r.domain(d3.extent(allData, d => d.pop));
+            xAxisG.call(d3.axisBottom(x).ticks(6, "~s"));
+            yAxisG.call(d3.axisLeft(y));
+            render();
+        });
+
+        function render() {
+            const yearData = allData.filter(d => d.year === currentYear);
+            const t = firstRender
+                ? null
+                : c.plot.transition().duration(450).ease(d3.easeCubicInOut);
+            firstRender = false;
+
+            // key join on country — each circle keeps its DOM identity across years
+            const merged = c.plot.selectAll("circle.country")
+                .data(yearData, d => d.country)
+                .join(
+                    enter => enter.append("circle")
+                        .attr("class",   "country")
+                        .attr("cx",      d => x(d.gdpPercap))
+                        .attr("cy",      d => y(d.lifeExp))
+                        .attr("r",       d => r(d.pop))
+                        .attr("fill",    d => colorOf(d.continent))
+                        .attr("opacity", 0.7)
+                        .attr("stroke",  "white"),
+                    update => update,
+                    exit   => exit.remove()
+                );
+
+            // animate cx/cy/r on the shared timeline (or instantly on the first render)
+            (t ? merged.transition(t) : merged)
+                .attr("cx", d => x(d.gdpPercap))
+                .attr("cy", d => y(d.lifeExp))
+                .attr("r",  d => r(d.pop));
+        }
+
+        d3.select("#year").on("input", function () {
+            currentYear = +this.value;
+            document.getElementById("year-display").textContent = currentYear;
+            render();
+        });
+    </script>
+</body>
+</html>

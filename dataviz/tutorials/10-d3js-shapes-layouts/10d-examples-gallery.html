@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>10d — Layouts: bar, stacked bar, streamgraph</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="./_shared/chart.js?v=3"></script>
+    <link rel="stylesheet" href="./_shared/chart.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/styles/github.min.css">
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/highlight.min.js"></script>
+    <script>document.addEventListener("DOMContentLoaded", () => hljs.highlightAll());</script>
+</head>
+
+<body>
+    <h1>10d — Layouts: bar, stacked bar, streamgraph</h1>
+    <p class="lead">10a, 10b, and 10c built the three L10 mechanisms — <strong>update pattern</strong>,
+        <strong>transitions</strong>, and <strong>events</strong>. This tutorial spends them on real
+        chart types from the <a href="https://observablehq.com/@d3/gallery" target="_blank">D3
+        Observable gallery</a>: a <strong>bar chart</strong> (the simplest layout-driven chart), a
+        <strong>stacked bar chart</strong> (introducing the <code>d3.stack</code> layout — a function
+        that turns a flat row-oriented array into per-segment <code>[y0, y1]</code> intervals), and a
+        <strong>streamgraph</strong> (same stack, different offset and curve). Closes with a
+        <em>which layout for which question?</em> decision table — picking the right layout is half
+        the job.</p>
+
+    <h2>How this tutorial is organised</h2>
+    <p>Three chart types, each built up in visible stages, then a decision aid:</p>
+    <ol>
+        <li><strong>Bar chart</strong> (§1-§3). One <code>&lt;rect&gt;</code> per category. We
+            build it in five steps — empty canvas → x positions → y heights → axes → polish — and
+            then look at the <code>scaleBand</code> padding knobs that control the gaps between
+            bars.</li>
+        <li><strong>Stacked bar chart</strong> (§4-§6). Same bars, multiple series stacked on top
+            of each other. We motivate the new ingredient (we need running totals — flat arrays
+            don't carry them), introduce <code>d3.stack()</code> as the helper that produces them,
+            and build the chart in three steps using a <em>nested join</em>.</li>
+        <li><strong>Streamgraph</strong> (§7-§8). Same <code>d3.stack()</code> output drawn as
+            flowing areas instead of rectangles, with a different <em>offset</em> (the baseline
+            shape) and a smoothing <em>curve</em>. Three steps from flat baseline → centred →
+            canonical wiggle, plus an interactive playground.</li>
+        <li><strong>Choosing a layout</strong> (§9-§10). One short paragraph on what makes
+            <code>d3.stack</code> a "layout" in the D3 sense, then a decision table covering every
+            layout you will meet in L11 / L12.</li>
+    </ol>
+
+    <h2>1. A simple bar chart</h2>
+    <p>The simplest layout-driven chart. A bar is a <code>&lt;rect&gt;</code> with four attributes:</p>
+    <ul>
+        <li><code>x</code> — left edge of the bar</li>
+        <li><code>y</code> — <strong>top</strong> edge of the bar (not the bottom!)</li>
+        <li><code>width</code> — bar width</li>
+        <li><code>height</code> — bar height</li>
+    </ul>
+    <p>Because SVG <code>y</code> grows downward, the <em>top</em> of a bar has the <em>smaller</em>
+        <code>y</code>. The <code>height</code> is then computed as the distance from the top down to the
+        baseline. Most bar-chart bugs in D3 trace back to this single fact.
+    </p>
+
+    <h2>2. Bar chart construction, step by step</h2>
+    <p>Mean life expectancy per continent for 2007 — five values, five bars. We build it in five
+        visible stages, the same way 09e built the scatterplot.</p>
+
+    <h3>Step 1 — the data and an empty canvas</h3>
+    <p>Start from the data and the standard margin convention. Nothing drawn yet — the canvas is a
+        rectangle of known inner dimensions <code>innerW × innerH</code> we can fill in the next steps:</p>
+    <pre><code>const barData = [
+    { continent: "Africa",   mean: 54.8 },
+    { continent: "Americas", mean: 73.6 },
+    { continent: "Asia",     mean: 70.7 },
+    { continent: "Europe",   mean: 77.6 },
+    { continent: "Oceania",  mean: 80.7 }
+];
+
+const margin = { top: 20, right: 20, bottom: 40, left: 40 };
+const innerW = width  - margin.left - margin.right;
+const innerH = height - margin.top  - margin.bottom;
+
+const svg = d3.select("#chart").append("svg")
+    .attr("width", width).attr("height", height);
+const plot = svg.append("g")
+    .attr("transform", `translate(${margin.left}, ${margin.top})`);</code></pre>
+    <div class="container" id="demo-bar-step1"></div>
+
+    <h3>Step 2 — place the bars horizontally with <code>scaleBand</code></h3>
+    <p>One slot per continent. With <strong>fixed heights</strong> for now, just to confirm the
+        horizontal positions are right:</p>
+    <pre><code>const x = d3.scaleBand()
+    .domain(barData.map(d =&gt; d.continent))
+    .range([0, innerW])
+    .padding(0.15);
+
+plot.selectAll("rect").data(barData).join("rect")
+    .attr("x",      d =&gt; x(d.continent))
+    .attr("y",      0)
+    .attr("width",  x.bandwidth())
+    .attr("height", innerH)               // ← placeholder: full plot height
+    .attr("fill",   "#0072B2").attr("opacity", 0.4);</code></pre>
+    <div class="container" id="demo-bar-step2"></div>
+
+    <h3>Step 3 — encode the value as height with <code>scaleLinear</code></h3>
+    <p>Now the bars reflect the data. Note the <strong>inverted range</strong>
+        (<code>[innerH, 0]</code>) so larger values appear higher, and the height formula
+        <code>innerH - y(d.mean)</code> grows the bar upward from the baseline:</p>
+    <pre><code>const y = d3.scaleLinear()
+    .domain([0, d3.max(barData, d =&gt; d.mean)]).nice()
+    .range([innerH, 0]);                  // inverted on purpose
+
+plot.selectAll("rect").data(barData).join("rect")
+    .attr("x",      d =&gt; x(d.continent))
+    .attr("y",      d =&gt; y(d.mean))       // top of the bar
+    .attr("width",  x.bandwidth())
+    .attr("height", d =&gt; innerH - y(d.mean));   // top → baseline
+</code></pre>
+    <div class="container" id="demo-bar-step3"></div>
+    <p>If you swap <code>height = y(d.mean)</code> by mistake, every bar hangs from the top of the
+        chart (try it locally — the result is unmistakable).</p>
+
+    <h3>Step 4 — axes</h3>
+    <p>Two axis generators, one per scale, draw ticks and labels at the edges of the plot:</p>
+    <pre><code>plot.append("g").attr("class", "axis")
+    .attr("transform", `translate(0, ${innerH})`)
+    .call(d3.axisBottom(x));
+
+plot.append("g").attr("class", "axis")
+    .call(d3.axisLeft(y));</code></pre>
+    <div class="container" id="demo-bar-step4"></div>
+
+    <h3>Step 5 — the finished bar chart</h3>
+    <p>Same code, with a per-continent fill from the shared palette, a touch of opacity, and a value
+        label above each bar. This is what the rest of the tutorial assumes when it says
+        "the bar chart":</p>
+    <pre><code>plot.selectAll("rect.bar").data(barData).join("rect")
+    .attr("class", "bar")
+    .attr("x",      d =&gt; x(d.continent))
+    .attr("y",      d =&gt; y(d.mean))
+    .attr("width",  x.bandwidth())
+    .attr("height", d =&gt; innerH - y(d.mean))
+    .attr("fill",   d =&gt; PALETTE[d.continent])
+    .attr("opacity", 0.85);
+
+plot.selectAll("text.value").data(barData).join("text")
+    .attr("class", "value")
+    .attr("x", d =&gt; x(d.continent) + x.bandwidth() / 2)
+    .attr("y", d =&gt; y(d.mean) - 6)
+    .attr("text-anchor", "middle")
+    .text(d =&gt; d3.format(".1f")(d.mean));</code></pre>
+    <div class="container" id="demo-bar"></div>
+
+    <h2>3. The padding knobs on <code>scaleBand</code></h2>
+    <p>You met <code>scaleBand</code> in 09c §7 — <code>x("category")</code> for the slot's left edge,
+        <code>x.bandwidth()</code> for the slot width. The piece you didn't need there is
+        <strong>padding</strong>, which controls the gap between bars and the gap between bars and the
+        plot edges:</p>
+    <pre><code>d3.scaleBand()
+    .domain([...])
+    .range([0, innerW])
+    .paddingInner(0.15)     // gap BETWEEN bars (fraction of step)
+    .paddingOuter(0.25)     // gap at each end of the range
+    .align(0.5);            // where the leftover space goes (0 = left, 1 = right)
+
+// shorthand:
+.padding(0.15)              // sets paddingInner AND paddingOuter to 0.15</code></pre>
+    <p>Below: same seven categories, three different inner paddings. Padding controls the gap between
+        bars; pick a value that lets the bars dominate without crowding.</p>
+    <div class="container" id="demo-band"></div>
+
+    <h2>4. Why stacked bars need transformed data</h2>
+    <p>The plain bar chart had one number per x-category — easy: one
+        <code>&lt;rect&gt;</code>, top edge at <code>y(d.value)</code>. A
+        <strong>stacked</strong> bar chart shows several categories piled on top of each other at
+        the same x-position (apples + bananas + cherries per year). The visible shape now requires
+        more information per segment than the input row directly carries:</p>
+    <ul>
+        <li>the x-category (<em>which bar</em>)</li>
+        <li>the lower y of the segment (<em>where it starts</em>)</li>
+        <li>the upper y of the segment (<em>where it ends</em>)</li>
+        <li>the series key (<em>which colour</em>)</li>
+    </ul>
+    <p>The lower and upper edges are <em>running totals</em> — the cherries layer's lower edge is
+        apples + bananas, its upper edge is apples + bananas + cherries. Computing them by hand
+        every render would be tedious and error-prone, so D3 ships a helper that does the
+        arithmetic and packages the result in a join-friendly shape:
+        <code>d3.stack()</code>.</p>
+
+    <h2>5. <code>d3.stack()</code> transforms columns into layers</h2>
+    <p>Input: an array of "wide" rows where each row is one x-position and each column is one series.</p>
+    <pre><code>const data = [
+    { year: 2018, apples: 10, bananas: 20, cherries:  5 },
+    { year: 2019, apples: 12, bananas: 18, cherries:  8 },
+    { year: 2020, apples: 15, bananas: 22, cherries:  6 },
+    { year: 2021, apples: 17, bananas: 24, cherries: 10 },
+    { year: 2022, apples: 14, bananas: 21, cherries: 12 }
+];
+
+const stack = d3.stack().keys(["apples", "bananas", "cherries"]);
+const series = stack(data);</code></pre>
+    <p>Output: an array of <strong>layers</strong>, one per key. Each layer has one entry per x-position, and
+        each entry is a <code>[y0, y1]</code> pair (the bottom and top of the segment). The original row is
+        attached as <code>.data</code>:</p>
+    <pre><code>// series[0]  → the "apples" layer
+// series[0][0] → [0, 10]   for year 2018  (apples stacked first, so y0 = 0)
+// series[1][0] → [10, 30]  for year 2018  (bananas on top of apples)
+// series[2][0] → [30, 35]  for year 2018  (cherries on top of bananas)
+// series[0][0].data → { year: 2018, apples: 10, bananas: 20, cherries: 5 }</code></pre>
+
+    <h2>6. Drawing a stacked bar chart, step by step</h2>
+    <p>The output of <code>d3.stack()</code> (an array of layers, each holding per-x segments) maps
+        directly onto a <strong>nested</strong> data join: one <code>&lt;g&gt;</code> per layer,
+        one <code>&lt;rect&gt;</code> per segment inside it. Below is the full pattern; the next
+        three sub-sections build it up one layer at a time.</p>
+    <pre><code>svg.selectAll("g.layer")
+    .data(series)
+    .join("g")
+        .attr("class", "layer")
+        .attr("fill", d =&gt; color(d.key))    // colour set ONCE per layer
+  .selectAll("rect")
+    .data(d =&gt; d)                            // children = segments of THIS layer
+    .join("rect")
+        .attr("x",      d =&gt; x(d.data.year))
+        .attr("y",      d =&gt; y(d[1]))        // top of the segment
+        .attr("height", d =&gt; y(d[0]) - y(d[1]))   // top − bottom
+        .attr("width",  x.bandwidth());</code></pre>
+    <p>The <code>y</code>-scale's domain is the <em>maximum upper edge</em> across all layers, not
+        the max of any single column — because what we are plotting is the running total, not the
+        individual values:</p>
+    <pre><code>const yMax = d3.max(series, layer =&gt; d3.max(layer, d =&gt; d[1]));
+const y = d3.scaleLinear().domain([0, yMax]).nice().range([innerH, 0]);</code></pre>
+
+    <h3>Step 1 — draw a single layer first</h3>
+    <p>Before nesting the join, draw just the "apples" layer (<code>series[0]</code>) as a flat data
+        join. This shows what one layer looks like in isolation: each segment's <code>y</code> is its
+        upper edge <code>d[1]</code>, and its height is <code>y(d[0]) − y(d[1])</code>. Axes are
+        included from the start so the bars have a visible frame of reference:</p>
+    <pre><code>plot.append("g").attr("class", "axis")
+    .attr("transform", `translate(0, ${innerH})`)
+    .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+plot.append("g").attr("class", "axis").call(d3.axisLeft(y));
+
+plot.selectAll("rect").data(series[0]).join("rect")
+    .attr("x",      d =&gt; x(d.data.year))
+    .attr("y",      d =&gt; y(d[1]))
+    .attr("width",  x.bandwidth())
+    .attr("height", d =&gt; y(d[0]) - y(d[1]))
+    .attr("fill",   color("apples"));</code></pre>
+    <div class="container" id="demo-stack-step1"></div>
+
+    <h3>Step 2 — stack all three layers via the nested join</h3>
+    <p>Now bind <code>series</code> (the array of all three layers) to <code>&lt;g&gt;</code> elements,
+        and inside each <code>&lt;g&gt;</code> bind that layer's segments to <code>&lt;rect&gt;</code>
+        children. The outer <code>fill</code> on each <code>&lt;g&gt;</code> propagates to its child
+        <code>&lt;rect&gt;</code>s, so the colour is set in one place per layer. Axes carry over
+        from step 1; only the legend is still missing:</p>
+    <pre><code>plot.selectAll("g.layer").data(series).join("g")
+        .attr("class", "layer")
+        .attr("fill", d =&gt; color(d.key))           // colour set per LAYER
+    .selectAll("rect").data(d =&gt; d).join("rect")    // children = segments of THIS layer
+        .attr("x",      d =&gt; x(d.data.year))
+        .attr("y",      d =&gt; y(d[1]))
+        .attr("width",  x.bandwidth())
+        .attr("height", d =&gt; y(d[0]) - y(d[1]));</code></pre>
+    <div class="container" id="demo-stack-step2"></div>
+
+    <h3>Step 3 — add axes, the legend, and styling</h3>
+    <p>Same nested join, plus axis generators at the edges of the plot and a categorical legend above
+        the chart (the shared <code>legend()</code> helper from <code>_shared/chart.js</code> populates
+        an empty <code>&lt;div class="legend"&gt;&lt;/div&gt;</code> with one swatch + label per
+        scale entry):</p>
+    <pre><code>// in the page: &lt;div class="legend" id="legend-stack"&gt;&lt;/div&gt;
+legend("#legend-stack", color);
+
+plot.append("g").attr("class", "axis")
+    .attr("transform", `translate(0, ${innerH})`)
+    .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+plot.append("g").attr("class", "axis").call(d3.axisLeft(y));
+
+// the same nested join from Step 2, with .attr("opacity", 0.9) added.</code></pre>
+    <div class="legend" id="legend-stack"></div>
+    <div class="container" id="demo-stack"></div>
+
+    <h2>7. Streamgraph — the same stack, drawn as flowing areas</h2>
+    <p>The stacked bar chart in §6 used three ingredients: <code>d3.stack()</code> output, a
+        <code>scaleBand</code> on the x-axis, and one <code>&lt;rect&gt;</code> per segment.
+        Replace the rectangles with <code>d3.area()</code> paths and switch the
+        <code>scaleBand</code> for a continuous <code>scaleLinear</code> on x and you get a
+        <strong>streamgraph</strong>: the same per-segment <code>[y0, y1]</code> intervals from
+        <code>d3.stack()</code>, drawn as smooth flowing ribbons instead of discrete bars. The two
+        controls that turn a stacked area into a "real" streamgraph are the stack's
+        <strong>offset</strong> (the shape of the baseline — flat / centred / wiggle-minimised) and
+        the area's <strong>curve</strong> (sharp segments vs. smooth interpolation).</p>
+    <p><strong>The dataset matters.</strong> A streamgraph only earns its keep when series rise and fall
+        at <em>different</em> times — that's what <code>stackOffsetWiggle</code> is for. Monotonic data
+        (every series only going up, like population over decades) makes wiggle / silhouette / none look
+        nearly identical, defeating the chart. Mike Bostock's
+        <a href="https://gist.github.com/mbostock/4060954" target="_blank">classic streamgraph gist</a>
+        and Byron &amp; Wattenberg's original paper both use <strong>synthetic random-bump data</strong>
+        for exactly this reason: 12 series × 200 time points where each series is a sum of random
+        Gaussian bumps. We use the same construction below — the patterns generalise to any real dataset
+        of the same shape (BLS unemployment by industry, music genres over time, etc.).</p>
+    <p>Three visible stages on the same synthetic data:</p>
+
+    <h3>Step 1 — stacked area with the default offset</h3>
+    <p><code>d3.stackOffsetNone</code> uses a flat baseline at <em>y</em> = 0 — the result is a
+        stacked area with the same flat baseline as §6's stacked bar, just drawn with
+        <code>d3.area()</code> ribbons instead of <code>&lt;rect&gt;</code>s. The data shape and
+        the join are identical to §6; only the geometry changes:</p>
+    <pre><code>const stack = d3.stack().keys(seriesKeys);    // default: stackOffsetNone
+
+const area = d3.area()
+    .x(d =&gt; x(d.data.t))
+    .y0(d =&gt; y(d[0]))
+    .y1(d =&gt; y(d[1]));                          // straight segments, no curve yet
+
+svg.selectAll("path.layer").data(stack(rows)).join("path")
+    .attr("d", area)
+    .attr("fill", d =&gt; colour(d.key));</code></pre>
+    <div class="container" id="demo-stream-step1"></div>
+
+    <h3>Step 2 — switch to a centred offset</h3>
+    <p><code>d3.stackOffsetSilhouette</code> reflects the stack around zero so it grows symmetrically
+        from a horizontal centre line. The total height per year is still the sum of all continents — it
+        just sits half above and half below the axis:</p>
+    <pre><code>d3.stack().keys(seriesKeys)
+    .offset(d3.stackOffsetSilhouette);          // ← centred</code></pre>
+    <div class="container" id="demo-stream-step2"></div>
+
+    <h3>Step 3 — minimise wiggle and add a curve</h3>
+    <p><code>d3.stackOffsetWiggle</code> (Byron &amp; Wattenberg, 2008) chooses the baseline that
+        minimises the slope of every layer — so the eye follows each stream more easily. Combine it with
+        <code>d3.stackOrderInsideOut</code> (large layers in the middle) and a smooth
+        <code>curveBasis</code> in the area generator and you get the canonical streamgraph look:</p>
+    <pre><code>const stack = d3.stack().keys(seriesKeys)
+    .offset(d3.stackOffsetWiggle)
+    .order(d3.stackOrderInsideOut);
+
+const area = d3.area()
+    .x(d =&gt; x(d.data.t))
+    .y0(d =&gt; y(d[0]))
+    .y1(d =&gt; y(d[1]))
+    .curve(d3.curveBasis);                      // smooth interpolation</code></pre>
+    <div class="container" id="demo-stream-step3"></div>
+
+    <h2>8. Streamgraph — interactive playground</h2>
+    <p>D3 ships a small zoo of stack offsets and orders. The interactive version below lets you mix and
+        match — same data, same layout, very different pictures (the Observable gallery's
+        <a href="https://observablehq.com/@d3/streamgraph" target="_blank"><em>Streamgraph</em></a>
+        notebook does the same).</p>
+    <ul>
+        <li><code>stackOffsetNone</code> — flat baseline (default; stacked-bar shape)</li>
+        <li><code>stackOffsetExpand</code> — every column normalises to 1 (100% stacked)</li>
+        <li><code>stackOffsetSilhouette</code> — centred around zero (symmetric streamgraph)</li>
+        <li><code>stackOffsetWiggle</code> — minimises layer slope (Byron &amp; Wattenberg)</li>
+    </ul>
+    <p>
+        <label>offset
+            <select id="stream-offset">
+                <option value="none">none (flat baseline)</option>
+                <option value="silhouette">silhouette</option>
+                <option value="wiggle" selected>wiggle</option>
+                <option value="expand">expand (100%)</option>
+            </select></label>
+        <label>order
+            <select id="stream-order">
+                <option value="none">none</option>
+                <option value="insideOut" selected>insideOut</option>
+                <option value="ascending">ascending</option>
+                <option value="reverse">reverse</option>
+            </select></label>
+    </p>
+    <div class="legend" id="legend-stream"></div>
+    <div class="container" id="demo-stream"></div>
+
+    <h2>9. <code>d3.stack</code> is one example of a D3 layout</h2>
+    <p>Step back for a second. <code>d3.stack()</code> is a function that took flat input rows and
+        produced drawable geometry — per-segment <code>[y0, y1]</code> intervals. That contract —
+        <em>data goes in, drawable geometry comes out</em> — is what D3 means by a
+        <strong>layout</strong>. There is a small family of them, and their API shapes are all
+        recognisably similar:</p>
+    <ul>
+        <li><code>d3.stack</code> — stacked bars / areas (this tutorial).</li>
+        <li><code>d3.pie</code> — angles for pie / donut slices. Returns one
+            <code>{ startAngle, endAngle, value, ... }</code> per row.</li>
+        <li><code>d3.hierarchy</code> + <code>d3.tree</code> / <code>d3.treemap</code> /
+            <code>d3.pack</code> — hierarchical layouts. Take a tree, add x/y or rectangles or
+            radii to every node.</li>
+        <li><code>d3.forceSimulation</code> — physical simulation for force-directed graphs
+            (L11). Mutates each node's <code>x</code> / <code>y</code> tick by tick.</li>
+        <li><code>d3.chord</code> + <code>d3.ribbon</code> — pair-wise weighted relationships
+            laid out around a circle (L12).</li>
+    </ul>
+    <p>Once you've built one chart with <code>d3.stack</code>, the rest of the family is
+        approachable: feed in the data, read out the geometry, hand the geometry to a data join.
+        The mechanical pattern is identical; only the geometry changes.</p>
+
+    <h2>10. Which layout for which question?</h2>
+    <p>The hard part of a layout-driven chart isn't writing the code — every <code>d3.*</code> layout
+        follows the same shape — but choosing the right one for the analytical question. A short
+        decision table, including the layouts you'll meet in L11 / L12:</p>
+    <table>
+        <thead>
+            <tr><th>Question / data shape</th><th>Layout</th><th>Why</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>One measure across categories ("mean life expectancy by continent")</td>
+                <td><code>scaleBand</code> + plain <code>&lt;rect&gt;</code></td>
+                <td>No layout transformation needed — bar chart, simplest case.</td>
+            </tr>
+            <tr>
+                <td>Sum-to-total comparison over a categorical x-axis</td>
+                <td><code>d3.stack().offset(stackOffsetNone)</code></td>
+                <td>Stacked bars / areas with a flat baseline. Absolute totals legible.</td>
+            </tr>
+            <tr>
+                <td>Share comparison ("what fraction of each year is apples?")</td>
+                <td><code>d3.stack().offset(stackOffsetExpand)</code></td>
+                <td>Each column normalises to 1 — 100% stacked. Parts-of-whole over time.</td>
+            </tr>
+            <tr>
+                <td>Trend visibility for many series at once ("how does each genre rise and fall over
+                    decades?")</td>
+                <td><code>d3.stack().offset(stackOffsetWiggle)</code> (streamgraph)</td>
+                <td>Centred ribbon minimises layer slope (Byron &amp; Wattenberg). Easier to follow
+                    individual streams than a flat-baseline stack.</td>
+            </tr>
+            <tr>
+                <td>One categorical breakdown at one moment ("market share now")</td>
+                <td><code>d3.pie</code> + <code>d3.arc</code></td>
+                <td>Donut / pie. Avoid for &gt; 6 categories or close-in values.</td>
+            </tr>
+            <tr>
+                <td>Hierarchy with quantitative weight ("disk usage by directory")</td>
+                <td><code>d3.hierarchy</code> + <code>d3.treemap</code> /
+                    <code>d3.partition</code> / <code>d3.pack</code></td>
+                <td>Recursive subdivision. Treemap fills a rectangle, partition makes sunbursts,
+                    pack makes circle-packing.</td>
+            </tr>
+            <tr>
+                <td>Connections without a hierarchy ("character co-occurrence")</td>
+                <td><code>d3.forceSimulation</code></td>
+                <td>Physics-driven layout — see <strong>L11</strong>.</td>
+            </tr>
+            <tr>
+                <td>Pair-wise weighted relationships in a small set</td>
+                <td><code>d3.chord</code> + <code>d3.ribbon</code></td>
+                <td>Matrix bent into a circle — see <strong>L12 §12b</strong>.</td>
+            </tr>
+            <tr>
+                <td>Directed flow between layers ("budget by department by year")</td>
+                <td><code>d3.sankey</code> (plugin)</td>
+                <td>Flow diagram — see <strong>L12 §12c</strong>.</td>
+            </tr>
+        </tbody>
+    </table>
+    <p>The mechanical pattern is identical across every D3 layout: <em>data goes in, drawable geometry
+        comes out</em>. The skill is matching the geometry to the question.</p>
+
+    <div class="note"><strong>Takeaway.</strong> 10d shows the three L10 mechanisms (update / transition /
+        event) applied to <em>layout-driven</em> chart types — bar, stacked bar, streamgraph. The
+        layouts themselves come from the same family (<code>d3.stack</code> here;
+        <code>d3.pie</code>, <code>d3.hierarchy</code>, <code>d3.forceSimulation</code> elsewhere)
+        and obey the same "data in, drawable geometry out" contract. Picking the right layout for the
+        question is half the job — see the decision table above. <code>10e</code> adds the navigation
+        primitive (<code>d3.zoom</code>) so any of these charts can hold more data than fits on one
+        screen.</div>
+
+    <h2>References</h2>
+    <ul>
+        <li><a href="https://observablehq.com/@d3/bar-chart" target="_blank">Observable — Bar chart</a> ·
+            <a href="https://observablehq.com/@d3/stacked-bar-chart" target="_blank">Stacked bar
+                chart</a> ·
+            <a href="https://observablehq.com/@d3/streamgraph" target="_blank">Streamgraph</a>.</li>
+        <li><a href="https://github.com/d3/d3-shape#stacks" target="_blank">d3-shape · stacks</a> —
+            offset and order helpers.</li>
+        <li>Byron &amp; Wattenberg, <em>Stacked Graphs — Geometry &amp; Aesthetics</em> (2008) — the
+            paper behind <code>stackOffsetWiggle</code>.</li>
+    </ul>
+
+    <p class="tutorial-nav"><a href="10c-interactions-capstone.html">← 10c — Interactions capstone</a> ·
+        <a href="index.html">L10 index</a> ·
+        <a href="10e-zoom-and-navigation.html">10e — Zoom and navigation →</a></p>
+
+    <script>
+        const PALETTE = {
+            Africa: "#009E73", Americas: "#D55E00", Asia: "#0072B2",
+            Europe: "#CC79A7", Oceania: "#E69F00"
+        };
+
+        // ---------- §2. bar chart, built up step by step ----------
+        d3.csv("./datasets/gapminder.csv", d => ({
+            continent: d.continent, year: +d.year, lifeExp: +d.lifeExp
+        })).then(rows => {
+            // shared data: mean life expectancy per continent in 2007
+            const meanByContinent = d3.rollup(rows.filter(d => d.year === 2007),
+                v => d3.mean(v, d => d.lifeExp), d => d.continent);
+            const barData = Array.from(meanByContinent,
+                ([continent, mean]) => ({ continent, mean }))
+                .sort((a, b) => d3.ascending(a.mean, b.mean));
+            const barOpts = { margin: { top: 20, right: 20, bottom: 40, left: 50 } };
+            const yMax = d3.max(barData, d => d.mean);
+
+            // Step 1 — empty canvas
+            {
+                makeCanvas("#demo-bar-step1", 240, barOpts);
+            }
+
+            // Step 2 — x-scale via scaleBand, fixed-height placeholder rects
+            {
+                const c = makeCanvas("#demo-bar-step2", 240, barOpts);
+                const x = d3.scaleBand().domain(barData.map(d => d.continent))
+                    .range([0, c.innerW]).padding(0.15);
+                c.plot.selectAll("rect").data(barData).join("rect")
+                    .attr("x", d => x(d.continent))
+                    .attr("y", 0).attr("height", c.innerH)
+                    .attr("width", x.bandwidth())
+                    .attr("fill", "#0072B2").attr("opacity", 0.4);
+            }
+
+            // Step 3 — add the y-scale → bars now reflect the data
+            {
+                const c = makeCanvas("#demo-bar-step3", 280, barOpts);
+                const x = d3.scaleBand().domain(barData.map(d => d.continent))
+                    .range([0, c.innerW]).padding(0.15);
+                const y = d3.scaleLinear().domain([0, yMax]).nice()
+                    .range([c.innerH, 0]);
+                c.plot.selectAll("rect").data(barData).join("rect")
+                    .attr("x", d => x(d.continent))
+                    .attr("y", d => y(d.mean))
+                    .attr("width", x.bandwidth())
+                    .attr("height", d => c.innerH - y(d.mean))
+                    .attr("fill", "#0072B2").attr("opacity", 0.7);
+            }
+
+            // Step 4 — add axes
+            {
+                const c = makeCanvas("#demo-bar-step4", 320, barOpts);
+                const x = d3.scaleBand().domain(barData.map(d => d.continent))
+                    .range([0, c.innerW]).padding(0.15);
+                const y = d3.scaleLinear().domain([0, yMax]).nice()
+                    .range([c.innerH, 0]);
+                c.plot.append("g").attr("class", "axis")
+                    .attr("transform", `translate(0, ${c.innerH})`)
+                    .call(d3.axisBottom(x));
+                c.plot.append("g").attr("class", "axis")
+                    .call(d3.axisLeft(y).tickFormat(d3.format(".0f")));
+                c.plot.selectAll("rect.bar").data(barData).join("rect")
+                    .attr("class", "bar")
+                    .attr("x", d => x(d.continent))
+                    .attr("y", d => y(d.mean))
+                    .attr("width", x.bandwidth())
+                    .attr("height", d => c.innerH - y(d.mean))
+                    .attr("fill", "#0072B2").attr("opacity", 0.7);
+            }
+
+            // Step 5 — finished bar chart with palette + value labels
+            {
+                const c = makeCanvas("#demo-bar", 360,
+                    { margin: { top: 30, bottom: 50, left: 50, right: 20 } });
+                const x = d3.scaleBand().domain(barData.map(d => d.continent))
+                    .range([0, c.innerW]).padding(0.15);
+                const y = d3.scaleLinear().domain([0, yMax]).nice()
+                    .range([c.innerH, 0]);
+                c.plot.append("g").attr("class", "axis")
+                    .attr("transform", `translate(0, ${c.innerH})`)
+                    .call(d3.axisBottom(x));
+                c.plot.append("g").attr("class", "axis")
+                    .call(d3.axisLeft(y).tickFormat(d3.format(".0f")));
+                c.plot.append("text")
+                    .attr("transform", `translate(-40, ${c.innerH / 2}) rotate(-90)`)
+                    .attr("text-anchor", "middle")
+                    .style("font-size", "var(--text-md)").style("fill", "#555")
+                    .text("mean life expectancy (years)");
+                c.plot.selectAll("rect.bar").data(barData).join("rect")
+                    .attr("class", "bar")
+                    .attr("x", d => x(d.continent))
+                    .attr("y", d => y(d.mean))
+                    .attr("width", x.bandwidth())
+                    .attr("height", d => c.innerH - y(d.mean))
+                    .attr("fill", d => PALETTE[d.continent])
+                    .attr("opacity", 0.85);
+                c.plot.selectAll("text.value").data(barData).join("text")
+                    .attr("class", "value")
+                    .attr("x", d => x(d.continent) + x.bandwidth() / 2)
+                    .attr("y", d => y(d.mean) - 6)
+                    .attr("text-anchor", "middle")
+                    .style("font-size", "var(--text-md)").attr("fill", "#333")
+                    .text(d => d3.format(".1f")(d.mean));
+            }
+        });
+
+        // ---------- 3. scaleBand padding variants ----------
+        {
+            const c = makeCanvas("#demo-band", 220, { margin: { top: 30, bottom: 50 } });
+            const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+            const rowH = (c.innerH - 30) / 3;
+            const paddings = [0.05, 0.25, 0.5];
+
+            paddings.forEach((pad, i) => {
+                const x = d3.scaleBand().domain(days)
+                    .range([0, c.innerW]).padding(pad);
+                const yOff = i * rowH;
+
+                // label
+                c.plot.append("text").attr("x", 0).attr("y", yOff + 14)
+                    .style("font-size", "var(--text-sm)").attr("fill", "#666")
+                    .text(`padding(${pad})`);
+
+                // bars at this row
+                c.plot.selectAll(`rect.r${i}`).data(days).join("rect")
+                    .attr("class", `r${i}`)
+                    .attr("x", d => x(d)).attr("y", yOff + 22)
+                    .attr("width", x.bandwidth()).attr("height", rowH - 26)
+                    .attr("fill", "#0072B2").attr("opacity", 0.7);
+            });
+        }
+
+        // ---------- §6. stacked bar chart, built up step by step ----------
+        {
+            const keysStack = ["apples", "bananas", "cherries"];
+            const color = d3.scaleOrdinal().domain(keysStack)
+                .range(["#D55E00", "#E69F00", "#7F3C8D"]);
+            const data = [
+                { year: 2018, apples: 10, bananas: 20, cherries: 5 },
+                { year: 2019, apples: 12, bananas: 18, cherries: 8 },
+                { year: 2020, apples: 15, bananas: 22, cherries: 6 },
+                { year: 2021, apples: 17, bananas: 24, cherries: 10 },
+                { year: 2022, apples: 14, bananas: 21, cherries: 12 }
+            ];
+            const series = d3.stack().keys(keysStack)(data);
+            const yMax = d3.max(series, layer => d3.max(layer, d => d[1]));
+            const stkOpts = { margin: { top: 20, right: 20, bottom: 40, left: 50 } };
+
+            // Step 1 — single layer (apples)
+            {
+                const c = makeCanvas("#demo-stack-step1", 280, stkOpts);
+                const x = d3.scaleBand().domain(data.map(d => d.year))
+                    .range([0, c.innerW]).padding(0.15);
+                const y = d3.scaleLinear().domain([0, yMax]).nice()
+                    .range([c.innerH, 0]);
+                c.plot.append("g").attr("class", "axis")
+                    .attr("transform", `translate(0, ${c.innerH})`)
+                    .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+                c.plot.append("g").attr("class", "axis").call(d3.axisLeft(y));
+                c.plot.selectAll("rect").data(series[0]).join("rect")
+                    .attr("x", d => x(d.data.year))
+                    .attr("y", d => y(d[1]))
+                    .attr("width", x.bandwidth())
+                    .attr("height", d => y(d[0]) - y(d[1]))
+                    .attr("fill", color("apples"))
+                    .attr("opacity", 0.9);
+            }
+
+            // Step 2 — all three layers via the nested join (axes carry over from step 1)
+            {
+                const c = makeCanvas("#demo-stack-step2", 320, stkOpts);
+                const x = d3.scaleBand().domain(data.map(d => d.year))
+                    .range([0, c.innerW]).padding(0.15);
+                const y = d3.scaleLinear().domain([0, yMax]).nice()
+                    .range([c.innerH, 0]);
+                c.plot.append("g").attr("class", "axis")
+                    .attr("transform", `translate(0, ${c.innerH})`)
+                    .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+                c.plot.append("g").attr("class", "axis").call(d3.axisLeft(y));
+                c.plot.selectAll("g.layer").data(series).join("g")
+                    .attr("class", "layer")
+                    .attr("fill", d => color(d.key))
+                    .selectAll("rect").data(d => d).join("rect")
+                    .attr("x", d => x(d.data.year))
+                    .attr("y", d => y(d[1]))
+                    .attr("width", x.bandwidth())
+                    .attr("height", d => y(d[0]) - y(d[1]))
+                    .attr("opacity", 0.9);
+            }
+
+            // Step 3 — finished stacked bar chart with legend + axes
+            {
+                legend("#legend-stack", color);
+                const c = makeCanvas("#demo-stack", 380,
+                    { margin: { top: 16, bottom: 50, left: 50, right: 20 } });
+                const x = d3.scaleBand().domain(data.map(d => d.year))
+                    .range([0, c.innerW]).padding(0.15);
+                const y = d3.scaleLinear().domain([0, yMax]).nice()
+                    .range([c.innerH, 0]);
+                c.plot.append("g").attr("class", "axis")
+                    .attr("transform", `translate(0, ${c.innerH})`)
+                    .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+                c.plot.append("g").attr("class", "axis").call(d3.axisLeft(y));
+                c.plot.selectAll("g.layer").data(series).join("g")
+                    .attr("class", "layer")
+                    .attr("fill", d => color(d.key))
+                    .selectAll("rect").data(d => d).join("rect")
+                    .attr("x", d => x(d.data.year))
+                    .attr("y", d => y(d[1]))
+                    .attr("width", x.bandwidth())
+                    .attr("height", d => y(d[0]) - y(d[1]))
+                    .attr("opacity", 0.9);
+            }
+        }
+
+        {
+            const N_SERIES = 12;
+            const N_POINTS = 200;
+            const N_BUMPS  = 2;
+
+            const rng = d3.randomLcg(7);
+            function bump(arr) {
+                const x = 1.5 + 1.5 * rng();
+                const y = rng();
+                const z = 8   + 6   * rng();
+                for (let i = 0; i < arr.length; i++) {
+                    const w = (i / arr.length - y) * z;
+                    arr[i] += x * Math.exp(-w * w);
+                }
+            }
+            const layers = d3.range(N_SERIES).map(() => {
+                const arr = new Array(N_POINTS).fill(0);
+                for (let j = 0; j < N_BUMPS; j++) bump(arr);
+                return arr;
+            });
+            const seriesKeys = d3.range(N_SERIES).map(i => `s${i + 1}`);
+            const rows = d3.range(N_POINTS).map(t => {
+                const row = { t };
+                seriesKeys.forEach((k, i) => row[k] = layers[i][t]);
+                return row;
+            });
+            const colour = d3.scaleOrdinal()
+                .domain(seriesKeys)
+                .range(d3.quantize(t => d3.interpolateViridis(0.05 + 0.85 * t), N_SERIES));
+            const streamOpts = { margin: { top: 20, right: 20, bottom: 40, left: 50 } };
+
+            // helper that draws a stacked-area chart given an offset / order / curve
+            function drawStream(selector, height, offset, order, curve) {
+                const c = makeCanvas(selector, height, streamOpts);
+                const stack = d3.stack().keys(seriesKeys).offset(offset).order(order);
+                const series = stack(rows);
+                const x = d3.scaleLinear().domain([0, N_POINTS - 1])
+                    .range([0, c.innerW]);
+                const yMin = d3.min(series, layer => d3.min(layer, d => d[0]));
+                const yMax = d3.max(series, layer => d3.max(layer, d => d[1]));
+                const y = d3.scaleLinear().domain([yMin, yMax])
+                    .range([c.innerH, 0]);
+                const area = d3.area()
+                    .x(d => x(d.data.t))
+                    .y0(d => y(d[0]))
+                    .y1(d => y(d[1]));
+                if (curve) area.curve(curve);
+                c.plot.append("g").attr("class", "axis")
+                    .attr("transform", `translate(0, ${c.innerH})`)
+                    .call(d3.axisBottom(x).ticks(8).tickFormat(d => `t=${d}`));
+                c.plot.selectAll("path.layer").data(series).join("path")
+                    .attr("class", "layer")
+                    .attr("d", area)
+                    .attr("fill", d => colour(d.key))
+                    .attr("opacity", 0.9);
+            }
+
+            // Step 1 — flat baseline (stackOffsetNone) with straight segments
+            drawStream("#demo-stream-step1", 280,
+                d3.stackOffsetNone, d3.stackOrderNone, null);
+
+            // Step 2 — silhouette (centred)
+            drawStream("#demo-stream-step2", 280,
+                d3.stackOffsetSilhouette, d3.stackOrderNone, null);
+
+            // Step 3 — wiggle + insideOut + curveBasis (canonical streamgraph)
+            drawStream("#demo-stream-step3", 320,
+                d3.stackOffsetWiggle, d3.stackOrderInsideOut, d3.curveBasis);
+
+            {
+                legend("#legend-stream", colour);
+                const c = makeCanvas("#demo-stream", 380,
+                    { margin: { top: 16, right: 40, bottom: 40, left: 50 } });
+                const x = d3.scaleLinear()
+                    .domain([0, N_POINTS - 1]).range([0, c.innerW]);
+
+                const offsets = {
+                    none: d3.stackOffsetNone, expand: d3.stackOffsetExpand,
+                    silhouette: d3.stackOffsetSilhouette, wiggle: d3.stackOffsetWiggle
+                };
+                const orders = {
+                    none: d3.stackOrderNone, insideOut: d3.stackOrderInsideOut,
+                    ascending: d3.stackOrderAscending, reverse: d3.stackOrderReverse
+                };
+
+                const xAxisG = c.plot.append("g").attr("class", "axis");
+                const yAxisG = c.plot.append("g").attr("class", "axis");
+                const layerG = c.plot.append("g");
+
+                function render() {
+                    const offsetKey = document.getElementById("stream-offset").value;
+                    const orderKey = document.getElementById("stream-order").value;
+
+                    const stack = d3.stack()
+                        .keys(seriesKeys)
+                        .offset(offsets[offsetKey])
+                        .order(orders[orderKey]);
+                    const series = stack(rows);
+
+                    const yMin = d3.min(series, layer => d3.min(layer, d => d[0]));
+                    const yMax = d3.max(series, layer => d3.max(layer, d => d[1]));
+                    const y = d3.scaleLinear().domain([yMin, yMax]).range([c.innerH, 0]);
+
+                    const area = d3.area()
+                        .x(d => x(d.data.t))
+                        .y0(d => y(d[0]))
+                        .y1(d => y(d[1]))
+                        .curve(d3.curveBasis);
+
+                    layerG.selectAll("path").data(series, d => d.key).join("path")
+                        .transition().duration(700)
+                        .attr("d", area)
+                        .attr("fill", d => colour(d.key))
+                        .attr("opacity", 0.9);
+
+                    xAxisG.attr("transform", `translate(0, ${c.innerH})`)
+                        .call(d3.axisBottom(x).ticks(8).tickFormat(d => `t=${d}`));
+                    yAxisG.transition().duration(500).call(
+                        offsetKey === "expand"
+                            ? d3.axisLeft(y).tickFormat(d3.format(".0%"))
+                            : d3.axisLeft(y).ticks(5));
+                }
+
+                render();
+                document.getElementById("stream-offset").addEventListener("change", render);
+                document.getElementById("stream-order").addEventListener("change", render);
+            }
+        }
+
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>10c — Interactions</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="./_shared/chart.js?v=3"></script>
+    <link rel="stylesheet" href="./_shared/chart.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/styles/github.min.css">
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/highlight.min.js"></script>
+    <script>document.addEventListener("DOMContentLoaded", () => hljs.highlightAll());</script>
+    <style>
+        #tooltip {
+            position: absolute;
+            pointer-events: none;
+            background: rgba(20, 20, 20, 0.92);
+            color: white;
+            padding: 0.4em 0.7em;
+            border-radius: 4px;
+            font-size: 12px;
+            line-height: 1.4;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+        .capstone-hint    { color: #555; font-size: 0.95em; margin-top: 1em; }
+        .capstone-controls { margin-top: 0.5em; }
+        .capstone-year    { display: inline-block; min-width: 8em; }
+        #year, #year-slider { width: 320px; vertical-align: middle; }
+    </style>
+</head>
+
+<body>
+    <h1>10c — Interactions</h1>
+    <p class="lead">10a built change (the update pattern); 10b animated it (transitions). The
+        missing piece is <em>who</em> triggers the change. In a static chart, nothing; in an
+        interactive chart, the reader does — by hovering, clicking, scrubbing a slider. This
+        tutorial closes the loop by wiring user events back into the same data join from 10a and
+        the same transitions from 10b, on the same Gapminder scatterplot from 09e.</p>
+
+    <h2>How this tutorial is organised</h2>
+    <p>Three blocks, in order:</p>
+    <ol>
+        <li><strong>The pattern</strong> (§1-§2). How D3 forwards DOM events to your callbacks,
+            and the three-step <em>event → state → render</em> loop that every interactive D3
+            chart follows.</li>
+        <li><strong>Three interactions, one chart at a time</strong> (§3-§5). Hover (§3), click
+            to toggle a selection (§4), and a year slider (§5) — each is built up step by step
+            in isolation so you can read the diff between "static" and "interactive" cleanly.</li>
+        <li><strong>Capstone and helpers</strong> (§6-§8). One chart that combines hover + click
+            + legend filter + slider; then a brief tour of D3's dedicated event helpers
+            (<code>d3.brush</code>, <code>d3.drag</code>, <code>d3.zoom</code>); then a four-step
+            walkthrough of <code>d3.brush</code> in detail.</li>
+    </ol>
+
+    <h2>1. Listening for user actions</h2>
+    <p>D3 selections forward DOM events through <code>selection.on</code>:</p>
+    <pre><code>svg.selectAll("circle")
+    .on("mouseover", (event, d) =&gt; {
+        console.log("hover on", d.country);
+    });</code></pre>
+    <p>The callback gets two arguments:</p>
+    <ul>
+        <li><code>event</code> — the native browser event (with <code>event.pageX</code>, <code>pageY</code>,
+            <code>currentTarget</code>, etc.)</li>
+        <li><code>d</code> — the datum bound to the element that fired the event</li>
+    </ul>
+    <p>This is how visual marks become interactive. The most common events:</p>
+    <ul>
+        <li><code>mouseover</code> · <code>mouseout</code> · <code>mousemove</code></li>
+        <li><code>click</code></li>
+        <li><code>input</code> · <code>change</code> (form controls)</li>
+        <li>keyboard events on the document or window</li>
+    </ul>
+
+    <h2>2. The event → state → render loop</h2>
+    <p>Most interactive D3 charts follow the same three-step loop:</p>
+    <ol>
+        <li><strong>Event</strong> — a user action fires (a hover, a click, a slider drag).</li>
+        <li><strong>State</strong> — the callback updates a small piece of state (a selected continent, a
+            current year).</li>
+        <li><strong>Render</strong> — a single render function reads the state and re-runs the data join.</li>
+    </ol>
+    <pre><code>let selectedContinent = null;       // state
+
+function render() {                  // render reads state
+    const visible = selectedContinent
+        ? data.filter(d =&gt; d.continent === selectedContinent)
+        : data;
+
+    svg.selectAll("circle")
+        .data(visible, d =&gt; d.country)
+        .join("circle")
+            .attr("cx", d =&gt; x(d.gdpPercap))
+            .attr("cy", d =&gt; y(d.lifeExp))
+            ...;
+}
+
+legend.on("click", (event, d) =&gt; {   // event updates state
+    selectedContinent = (selectedContinent === d) ? null : d;
+    render();
+});</code></pre>
+    <p>This split keeps event callbacks tiny — they only touch state. All drawing logic lives in one place,
+        which makes the chart easier to debug and extend.</p>
+
+    <h2>3. Hover tooltip — the simplest interaction</h2>
+    <p>The smallest useful interaction: a tooltip on hover. We use a single absolutely-positioned
+        <code>&lt;div&gt;</code> as a shared tooltip rather than appending one DOM element per row.</p>
+    <pre><code>const tip = d3.select("#tooltip");
+
+svg.selectAll("circle")
+    .on("mouseover", (event, d) =&gt; {
+        tip.style("opacity", 1)
+           .html(`&lt;b&gt;${d.country}&lt;/b&gt;&lt;br&gt;life exp: ${d.lifeExp.toFixed(1)} yr`);
+    })
+    .on("mousemove", (event) =&gt; {
+        tip.style("left", (event.pageX + 12) + "px")
+           .style("top",  (event.pageY + 12) + "px");
+    })
+    .on("mouseout", () =&gt; tip.style("opacity", 0));</code></pre>
+    <p>Below: the gapminder 2007 scatter with hover only — no filter, no slider yet. Hover a circle to
+        see the country and its life expectancy:</p>
+    <div class="container" id="demo-hover-only"></div>
+
+    <h2>4. Click to toggle — state lives in a variable</h2>
+    <p>The simplest interaction beyond hover is a <em>toggle</em>: click a mark, it lights up;
+        click it again, it goes back. We will build a country selector. Click any circle and it
+        becomes the <em>selected</em> country (thick black ring, every other circle fades into the
+        background); click the same one again, or click the empty area, and the selection clears.</p>
+
+    <h3>Step 1 — declare the state</h3>
+    <p>The whole interaction is about which country, if any, is currently selected. That is one
+        piece of information, so it gets one variable. We use <code>null</code> for "nothing
+        selected":</p>
+    <pre><code>let selected = null;        // either a country name (e.g. "Italy") or null</code></pre>
+    <p>Notice this lives <em>outside</em> any handler — it has to survive between events. Every
+        click will read it, change it, and read it again on the next click.</p>
+
+    <h3>Step 2 — write a render function that reads the state</h3>
+    <p>The render function does <strong>only one thing</strong>: it looks at <code>selected</code>
+        and decides how each circle should be drawn. We use the data join from
+        <code>10a</code> with a key on <code>d.country</code> so each circle stays bound to its
+        country across renders:</p>
+    <pre><code>function render() {
+    svg.selectAll("circle")
+        .data(data, d =&gt; d.country)
+        .join("circle")
+            // 1. positional attributes — same on every render
+            .attr("cx", d =&gt; x(d.gdpPercap))
+            .attr("cy", d =&gt; y(d.lifeExp))
+            .attr("r",  d =&gt; r(d.pop))
+            // 2. attributes that depend on the SELECTION
+            .attr("stroke",       d =&gt; d.country === selected ? "#1a1a1a" : "white")
+            .attr("stroke-width", d =&gt; d.country === selected ? 3 : 1)
+            .attr("opacity",      d =&gt; selected &amp;&amp; d.country !== selected ? 0.15 : 0.85);
+}</code></pre>
+    <p>Look at the three "depend on selection" lines:</p>
+    <ul>
+        <li><strong>stroke</strong> — black if this circle's country <em>is</em> the selected one,
+            white otherwise.</li>
+        <li><strong>stroke-width</strong> — fat (3) for the selected circle, thin (1) for the rest.</li>
+        <li><strong>opacity</strong> — when something is selected, dim every <em>other</em> circle
+            to 0.15; when nothing is selected (<code>selected === null</code>), the
+            <code>selected &amp;&amp; …</code> short-circuits to <code>null</code> (falsy), so every
+            circle stays at the normal 0.85.</li>
+    </ul>
+    <p>So if <code>selected</code> is <code>null</code>, render produces a plain scatter. If
+        <code>selected</code> is <code>"Italy"</code>, render produces the same scatter with Italy
+        decorated and the rest dimmed.</p>
+
+    <h3>Step 3 — wire the click to update the state and re-render</h3>
+    <p>The click handler is two lines. It updates <code>selected</code> with the toggle rule, then
+        calls <code>render()</code> so the visuals catch up:</p>
+    <pre><code>.on("click", (event, d) =&gt; {
+    selected = (selected === d.country) ? null : d.country;   // toggle
+    render();                                                  // redraw
+});</code></pre>
+    <p>Read the toggle line as a question: <em>"is this country already the selected one?"</em>
+        — if yes, set <code>selected</code> back to <code>null</code> (deselect); if no, make this
+        country the new selection.</p>
+    <p>Mounting the click handler inside <code>render</code> means every circle ends up with the
+        handler — newly entered circles get it on creation, existing ones get it re-attached
+        every render (a no-op replace). The handler is one short closure that captures
+        <code>selected</code> and <code>render</code> from the surrounding scope.</p>
+
+    <h3>Step 4 — let the background click clear the selection</h3>
+    <p>One small affordance: if the user clicks anywhere on the chart that isn't a circle, treat it
+        as "deselect". We attach a click handler to the SVG itself and check
+        <code>event.target</code>:</p>
+    <pre><code>svg.on("click", (event) =&gt; {
+    if (event.target.tagName !== "circle") {
+        selected = null;
+        render();
+    }
+});</code></pre>
+    <p>SVG events bubble up the same way HTML events do, so a click on a circle reaches both
+        handlers. The circle handler runs first; the SVG handler then sees
+        <code>event.target.tagName === "circle"</code> and ignores the event. A click on the empty
+        background reaches only the SVG handler, where the tag check fails and the selection is
+        cleared.</p>
+
+    <h3>Putting it together</h3>
+    <p>Three rules summarise the whole pattern:</p>
+    <ol>
+        <li><strong>One variable holds the state.</strong> If you find yourself adding a second to
+            track the same thing, you usually want one combined object instead.</li>
+        <li><strong>Event handlers only update state, then call <code>render</code>.</strong>
+            They never paint pixels themselves.</li>
+        <li><strong><code>render</code> is the only place that reads state and produces visuals.</strong>
+            Every visual difference between "before click" and "after click" must be expressible
+            inside <code>render</code> as a function of the state variables.</li>
+    </ol>
+    <p>This is exactly the loop you will reuse for sliders (§5), brushes (§8), and the L11 force
+        layouts. Try it: click any country, click another to switch, click the same one again — or
+        click the background — to clear:</p>
+    <div class="container" id="demo-click-filter"></div>
+
+    <h2>5. The year slider — scrubbing through time</h2>
+    <p>Gapminder spans the years 1952–2007. A range slider lets the reader move along that
+        timeline; each tick of the slider updates a piece of state (the current year) and
+        re-renders the chart with that year's data. The structure is the same loop as §4, but
+        the state now holds a <em>year</em> instead of a <em>selected country</em>, and circles
+        slide between positions instead of just changing colour.</p>
+
+    <h3>Step 1 — declare the state</h3>
+    <p>One variable holds the year currently shown on the chart:</p>
+    <pre><code>let currentYear = 1952;     // the year the chart is drawing right now</code></pre>
+
+    <h3>Step 2 — render reads the state and filters the data</h3>
+    <p>The render function looks at <code>currentYear</code>, picks the rows for that year, and
+        joins them to circles with a key on <code>d.country</code> so each country keeps the same
+        DOM element across years:</p>
+    <pre><code>function render() {
+    const yearData = data.filter(d =&gt; d.year === currentYear);
+
+    svg.selectAll("circle")
+        .data(yearData, d =&gt; d.country)         // ← key join from 10a
+        .join(
+            enter  =&gt; enter.append("circle")
+                .attr("cx", d =&gt; x(d.gdpPercap))
+                .attr("cy", d =&gt; y(d.lifeExp))
+                .attr("r",  d =&gt; r(d.pop))
+                .attr("fill", d =&gt; colorOf(d.continent)),
+            update =&gt; update,                    // existing circles are kept
+            exit   =&gt; exit.remove()              // a country with no row this year goes away
+        );
+}</code></pre>
+    <p>Why a key join? Without one, the circle at index 1 in 1952 would be reused for whichever
+        country happens to land at index 1 in 1957 — circles would visually swap identities every
+        tick. With <code>d =&gt; d.country</code>, "Italy"'s DOM circle stays bound to Italy for the
+        whole 1952→2007 span; only its <code>cx</code> / <code>cy</code> / <code>r</code> change.</p>
+
+    <h3>Step 3 — wire the slider's <code>input</code> event</h3>
+    <p>HTML <code>&lt;input type="range"&gt;</code> fires an <code>input</code> event on every drag
+        position (continuous), and a <code>change</code> event when the user releases (final value
+        only). For scrubbing we want continuous updates, so we listen to <code>input</code>:</p>
+    <pre><code>const yearSlider = d3.select("#year");
+
+yearSlider.on("input", function () {
+    currentYear = +this.value;     // string &rarr; number
+    render();                       // redraw with the new state
+});</code></pre>
+    <p>Same shape as the click handler in §4: update the state variable, then call
+        <code>render</code>. The <code>+</code> in front of <code>this.value</code> coerces the
+        slider's string value to a number — without it the filter
+        <code>d.year === currentYear</code> would always be false (string vs number).</p>
+
+    <h3>Step 4 — animate <code>cx</code>, <code>cy</code>, <code>r</code> with a transition</h3>
+    <p>If we stop here, every slider tick would <em>snap</em> circles to their new positions. That
+        is correct but jarring: the eye loses track of which country is which. Wrapping the
+        position attributes in a <code>.transition()</code> (from <code>10b</code>) makes the
+        circles glide between consecutive years:</p>
+    <pre><code>const t = svg.transition()
+    .duration(450)
+    .ease(d3.easeCubicInOut);   // shared 450 ms timeline for the whole frame
+
+svg.selectAll("circle")
+    .data(yearData, d =&gt; d.country)
+    .join(
+        enter  =&gt; enter.append("circle")
+            .attr("cx", d =&gt; x(d.gdpPercap))
+            .attr("cy", d =&gt; y(d.lifeExp))
+            .attr("r",  d =&gt; r(d.pop))
+            .attr("fill", d =&gt; colorOf(d.continent)),
+        update =&gt; update,
+        exit   =&gt; exit.remove()
+    )
+    .transition(t)                              // inherit the shared timeline
+        .attr("cx", d =&gt; x(d.gdpPercap))
+        .attr("cy", d =&gt; y(d.lifeExp))
+        .attr("r",  d =&gt; r(d.pop));</code></pre>
+    <p>Two subtle points worth naming:</p>
+    <ul>
+        <li><strong>Enter sets attributes instantly, then the merged selection transitions.</strong>
+            New circles appear in the right place on year 1; from then on they slide.</li>
+        <li><strong>Drag fast and the transitions interrupt cleanly.</strong> If a new
+            <code>input</code> event arrives mid-flight, D3 cancels the in-flight transition and
+            starts a new one from the circle's current position — no jitter, no jumps.</li>
+    </ul>
+    <p>Drag the slider to watch the world develop from 1952 onward:</p>
+    <p class="capstone-controls">
+        <label class="capstone-year">Year: <span id="year-display-slider">1952</span></label>
+        <input type="range" id="year-slider" min="1952" max="2007" step="5" value="1952">
+    </p>
+    <div class="container" id="demo-slider-only"></div>
+
+    <h2>6. Capstone: Gapminder, interactive</h2>
+    <p>Everything from this tutorial — events, state, render loop — combined into one chart:</p>
+    <ul>
+        <li><strong>Hover</strong> a circle to see the country name and stats (§3).</li>
+        <li><strong>Click a circle</strong> to toggle-select that country (§4); click it again, or
+            click the empty background, to clear.</li>
+        <li><strong>Click</strong> a continent in the legend to filter (click again to clear).</li>
+        <li><strong>Drag</strong> the slider to change the year (§5) — circles glide between years.</li>
+    </ul>
+    <p class="capstone-controls">
+        <label class="capstone-year">Year: <span id="year-display">1952</span></label>
+        <input type="range" id="year" min="1952" max="2007" step="5" value="1952">
+    </p>
+    <div class="container" id="chart"></div>
+    <div id="tooltip"></div>
+
+    <h2>7. Built-in interaction helpers</h2>
+    <p>For richer behaviours D3 ships dedicated helpers that handle the messy event details so your
+        callback stays declarative:</p>
+    <ul>
+        <li><code>d3.brush</code> — drag a rectangular selection over the chart (filtering, range
+            queries)</li>
+        <li><code>d3.drag</code> — make individual marks draggable (used heavily in force-directed
+            graphs in L11)</li>
+        <li><code>d3.zoom</code> — pan and zoom transforms on a chart (covered in <code>10e</code>)</li>
+    </ul>
+    <p>Each one follows the event → state → render pattern: the helper fires events, your callback
+        updates state, a render function redraws. Same shape, different inputs.</p>
+
+    <h2>8. <code>d3.brush</code> — selecting a range</h2>
+    <p>A <em>brush</em> is a draggable rectangular selection that the user paints onto the chart.
+        Inside the rectangle: the data points the reader cares about. Outside: everything else,
+        which we usually fade. The reader can resize the brush from its handles, drag it
+        wholesale to translate it, and click the empty area to clear it. D3 ships three
+        brush helpers — <code>d3.brushX</code> (selection along x only), <code>d3.brushY</code>
+        (along y only), and <code>d3.brush</code> (both axes). They follow the same
+        event → state → render loop you have used in §4-§5; the only new ingredient is that
+        the event source is now a D3 helper instead of a single DOM listener.</p>
+
+    <h3>Step 1 — create a brush behaviour</h3>
+    <p>A brush is a <em>behaviour object</em>: you configure it, then apply it to an SVG group.
+        Two settings matter:</p>
+    <pre><code>const brush = d3.brushX()
+    .extent([[0, 0], [innerW, innerH]])     // pixel rectangle the brush is allowed to live in
+    .on("brush end", handler);              // events to listen to
+</code></pre>
+    <p><code>extent</code> is the rectangle (in pixel coordinates of the inner plot area) inside
+        which the brush is allowed to be drawn. The two events worth listening to are:</p>
+    <ul>
+        <li><strong><code>brush</code></strong> — fires continuously while the user is dragging
+            (every pixel of motion). Use this for live updates.</li>
+        <li><strong><code>end</code></strong> — fires once when the user releases the mouse,
+            <em>and</em> once with <code>selection === null</code> when the user clicks outside to
+            clear. Use this to detect "the brush has been emptied".</li>
+    </ul>
+    <p>Listening to both (<code>"brush end"</code>) gives you live highlighting <em>plus</em> a
+        clean reset on click.</p>
+
+    <h3>Step 2 — write the handler: pixel → data, then re-style the marks</h3>
+    <p>The brush event object carries a <code>selection</code> field — either an array
+        <code>[x0, x1]</code> in pixels (for <code>brushX</code>) or <code>null</code> (when the
+        brush has been cleared). We invert the pixels through the x scale to get GDP values,
+        then set each circle's opacity according to whether its GDP falls inside the band:</p>
+    <pre><code>function handler({ selection }) {
+    if (!selection) {                                    // brush cleared
+        dots.attr("opacity", 0.7);                       //   → restore default opacity
+        return;
+    }
+    const [x0, x1] = selection.map(x.invert);            // pixel → GDP per capita
+    dots.attr("opacity", d =&gt;
+        (d.gdpPercap &gt;= x0 &amp;&amp; d.gdpPercap &lt;= x1) ? 1 : 0.1);
+}</code></pre>
+    <p>Three lines of decisions:</p>
+    <ul>
+        <li><strong>The early return</strong> handles the "click outside to clear" case. Without
+            it, the next line would crash because <code>null.map(...)</code> is an error.</li>
+        <li><strong><code>selection.map(x.invert)</code></strong> uses the scale's inverse function
+            to translate pixel positions back into data values. This is why scales matter so much
+            in D3 — they are bidirectional.</li>
+        <li><strong>The opacity ternary</strong> is a tiny render: each circle's opacity is a
+            function of one piece of state (the inverted band <code>[x0, x1]</code>). Same shape as
+            §4's <code>selected</code> ternary.</li>
+    </ul>
+
+    <h3>Step 3 — attach the brush to a group on top of the marks</h3>
+    <p>The brush renders as a small group of SVG elements (an overlay rectangle, the selection
+        rectangle, and resize handles). It must sit <em>on top</em> of the marks so it can
+        intercept mouse events:</p>
+    <pre><code>svg.append("g")
+    .attr("class", "brush")
+    .call(brush);              // applies the configured behaviour to the group</code></pre>
+    <p><code>selection.call(brush)</code> is the standard D3 idiom for invoking a behaviour on a
+        selection — the same pattern <code>d3.zoom</code> and <code>d3.drag</code> use in
+        <code>10e</code> and <code>11c</code>. Once you have called it, the user can paint
+        rectangles by clicking-and-dragging.</p>
+
+    <h3>Step 4 — try it</h3>
+    <p>Below: the gapminder 2007 scatterplot. Drag a rectangle along the x-axis to select a
+        GDP-per-capita band; countries inside the band stay opaque, the rest fade. Drag the brush
+        handles to resize, drag the band itself to move, or click outside the band to clear it:</p>
+    <p class="capstone-hint">
+        Try selecting <strong>$1k–$10k</strong> (developing economies cluster), then drag the band
+        to the right end to isolate the wealthy outliers.
+    </p>
+    <div class="container" id="chart-brush"></div>
+
+    <p>Same shape as the click / slider handlers in §4-§5: an event fires, a piece of state (here
+        the inverted GDP range <code>[x0, x1]</code>) is updated, marks are re-attributed.
+        <strong>Linked views</strong> — the canonical D3 dashboard pattern, where painting on one
+        chart highlights related rows in others — are nothing more than this same handler updating
+        a piece of state shared across several charts. Each chart has its own
+        <code>render</code>; all of them read the same selection.</p>
+
+    <div class="note"><strong>Takeaway.</strong> Three event sources (<code>selection.on</code>,
+        <code>d3.brush</code>, sliders) feeding one render function via a shared piece of state. From
+        here, every chart in the L11 / L12 unit (force layouts, chord diagrams, sankey) is a richer
+        composition of the same primitives — and L11's drag interaction is just <code>d3.drag</code>
+        wired to <code>fx</code>/<code>fy</code>, exactly the helper pattern shown above.</div>
+
+    <h2>References</h2>
+    <ul>
+        <li><a href="https://d3js.org/d3-selection/events" target="_blank">d3-selection · events</a>
+            — <code>selection.on</code> / <code>selection.dispatch</code> reference.</li>
+        <li><a href="https://d3js.org/d3-brush" target="_blank">d3-brush</a> ·
+            <a href="https://d3js.org/d3-drag" target="_blank">d3-drag</a> ·
+            <a href="https://d3js.org/d3-zoom" target="_blank">d3-zoom</a> — the three behaviour
+            modules.</li>
+        <li><a href="https://observablehq.com/@d3/scatterplot-tour" target="_blank">Observable —
+            Scatterplot tour</a> · <a href="https://observablehq.com/@d3/brushable-scatterplot"
+            target="_blank">Brushable scatterplot</a> — Mike Bostock's canonical interactive
+            scatterplots.</li>
+        <li><a href="https://github.com/d3/d3-selection/blob/main/README.md#handling-events"
+            target="_blank">D3 docs — handling events</a> (event object, <code>currentTarget</code>,
+            propagation).</li>
+    </ul>
+
+    <p class="tutorial-nav"><a href="10b-transitions.html">← 10b — Transitions</a> ·
+        <a href="index.html">L10 index</a> ·
+        <a href="10d-examples-gallery.html">10d — Examples gallery →</a></p>
+
+    <script>
+        // ============================================================
+        // Capstone: Gapminder, interactive
+        // ============================================================
+        const continents = ["Africa", "Americas", "Asia", "Europe", "Oceania"];
+        const palette    = ["#009E73", "#D55E00", "#0072B2", "#CC79A7", "#E69F00"];
+        const colorOf    = d3.scaleOrdinal().domain(continents).range(palette);
+
+        const c = makeCanvas("#chart", 480, {
+            width: 800,
+            margin: { top: 30, right: 150, bottom: 56, left: 64 }
+        });
+        const tip = d3.select("#tooltip");
+        const yearDisplay = document.getElementById("year-display");
+
+        let allData = [];
+        let currentYear = 1952;
+        let activeContinent = null;
+        let selectedCountry = null;
+
+        const x = d3.scaleLog().range([0, c.innerW]);
+        const y = d3.scaleLinear().range([c.innerH, 0]);
+        const r = d3.scaleSqrt().range([3, 32]);
+
+        const xAxisG = c.plot.append("g").attr("class", "axis")
+            .attr("transform", `translate(0, ${c.innerH})`);
+        const yAxisG = c.plot.append("g").attr("class", "axis");
+
+        c.plot.append("text")
+            .attr("x", c.innerW / 2).attr("y", c.innerH + 40).attr("text-anchor", "middle")
+            .style("font-size", "var(--text-md)").attr("fill", "#555")
+            .text("GDP per capita (log scale, USD)");
+        c.plot.append("text")
+            .attr("transform", `translate(-44, ${c.innerH / 2}) rotate(-90)`)
+            .attr("text-anchor", "middle")
+            .style("font-size", "var(--text-md)").attr("fill", "#555")
+            .text("Life expectancy (years)");
+
+        const legendG = c.plot.append("g").attr("transform", `translate(${c.innerW + 20}, 10)`);
+        legendG.append("text")
+            .attr("y", -6).style("font-weight", "bold").style("font-size", "var(--text-md)")
+            .text("Continent");
+
+        const legendItems = legendG.selectAll("g.item").data(continents).join("g")
+            .attr("class", "item")
+            .attr("transform", (d, i) => `translate(0, ${i * 22 + 10})`)
+            .style("cursor", "pointer")
+            .on("click", (event, d) => {
+                event.stopPropagation();
+                activeContinent = (activeContinent === d) ? null : d;
+                legendItems.attr("opacity", item =>
+                    activeContinent && item !== activeContinent ? 0.3 : 1);
+                render();
+            });
+        legendItems.append("rect")
+            .attr("x", -4).attr("y", -10).attr("width", 110).attr("height", 20)
+            .attr("fill", "transparent");
+        legendItems.append("circle").attr("r", 8).attr("fill", d => colorOf(d)).attr("opacity", 0.85);
+        legendItems.append("text").attr("x", 16).attr("y", 4).style("font-size", "var(--text-md)").text(d => d);
+
+        legendG.append("text")
+            .attr("y", continents.length * 22 + 30)
+            .style("font-size", "var(--text-sm)").attr("fill", "#888")
+            .text("(click to filter)");
+
+        d3.csv("./datasets/gapminder.csv", d => ({
+            country: d.country, continent: d.continent,
+            year: +d.year, lifeExp: +d.lifeExp,
+            pop: +d.pop, gdpPercap: +d.gdpPercap
+        })).then(rows => {
+            allData = rows;
+            x.domain(d3.extent(allData, d => d.gdpPercap)).nice();
+            y.domain(d3.extent(allData, d => d.lifeExp)).nice();
+            r.domain(d3.extent(allData, d => d.pop));
+            xAxisG.call(d3.axisBottom(x).ticks(6, "~s"));
+            yAxisG.call(d3.axisLeft(y));
+            render();
+        });
+
+        let capstoneFirstRender = true;
+        function render() {
+            const yearData = allData.filter(d => d.year === currentYear);
+            const visible = activeContinent
+                ? yearData.filter(d => d.continent === activeContinent)
+                : yearData;
+
+            const t = capstoneFirstRender
+                ? null
+                : c.plot.transition().duration(450).ease(d3.easeCubicInOut);
+            capstoneFirstRender = false;
+
+            const merged = c.plot.selectAll("circle.country")
+                .data(visible, d => d.country)
+                .join(
+                    enter => enter.append("circle")
+                        .attr("class", "country")
+                        .attr("cx", d => x(d.gdpPercap))
+                        .attr("cy", d => y(d.lifeExp))
+                        .attr("r",  d => r(d.pop))
+                        .attr("fill", d => colorOf(d.continent))
+                        .style("cursor", "pointer")
+                        .on("mouseover", function (event, d) {
+                            if (d.country !== selectedCountry) {
+                                d3.select(this).attr("stroke", "#1a1a1a").attr("stroke-width", 2);
+                            }
+                            tip.style("opacity", 1)
+                               .html(`<b>${d.country}</b><br>` +
+                                     `${d.continent} · ${d.year}<br>` +
+                                     `life exp: ${d.lifeExp.toFixed(1)} yr<br>` +
+                                     `pop: ${d3.format(",")(d.pop)}<br>` +
+                                     `GDP pc: ${d3.format("$,.0f")(d.gdpPercap)}`);
+                        })
+                        .on("mousemove", event => {
+                            tip.style("left", (event.pageX + 14) + "px")
+                               .style("top",  (event.pageY + 14) + "px");
+                        })
+                        .on("mouseout", function (event, d) {
+                            d3.select(this)
+                                .attr("stroke",       d.country === selectedCountry ? "#1a1a1a" : "white")
+                                .attr("stroke-width", d.country === selectedCountry ? 3 : 1);
+                            tip.style("opacity", 0);
+                        })
+                        .on("click", (event, d) => {
+                            event.stopPropagation();
+                            selectedCountry = (selectedCountry === d.country) ? null : d.country;
+                            render();
+                        }),
+                    update => update,
+                    exit => exit.remove()
+                );
+
+            merged
+                .attr("stroke",       d => d.country === selectedCountry ? "#1a1a1a" : "white")
+                .attr("stroke-width", d => d.country === selectedCountry ? 3 : 1)
+                .attr("opacity",      d => selectedCountry && d.country !== selectedCountry ? 0.15 : 0.7);
+
+            (t ? merged.transition(t) : merged)
+                .attr("cx", d => x(d.gdpPercap))
+                .attr("cy", d => y(d.lifeExp))
+                .attr("r",  d => r(d.pop));
+        }
+
+        c.root.on("click", function (event) {
+            if (event.target.tagName !== "circle" || !event.target.classList.contains("country")) {
+                if (selectedCountry !== null) {
+                    selectedCountry = null;
+                    render();
+                }
+            }
+        });
+
+        d3.select("#year").on("input", function () {
+            currentYear = +this.value;
+            yearDisplay.textContent = currentYear;
+            render();
+        });
+
+        // ============================================================
+        // §8. d3.brush — range filter on a static scatterplot
+        // ============================================================
+        {
+            const c = makeCanvas("#chart-brush", 360,
+                { margin: { top: 20, right: 30, bottom: 50, left: 60 } });
+
+            d3.csv("./datasets/gapminder.csv", d => ({
+                country:    d.country,
+                continent:  d.continent,
+                year:       +d.year,
+                gdpPercap:  +d.gdpPercap,
+                lifeExp:    +d.lifeExp,
+                pop:        +d.pop
+            })).then(raw => {
+                const data = raw.filter(d => d.year === 2007);
+                const x = d3.scaleLog().domain([200, 100000]).range([0, c.innerW]);
+                const y = d3.scaleLinear().domain([35, 85]).range([c.innerH, 0]);
+                const r = d3.scaleSqrt().domain([0, d3.max(data, d => d.pop)]).range([2, 18]);
+                const colour = d3.scaleOrdinal().range(d3.schemeTableau10)
+                    .domain([...new Set(data.map(d => d.continent))]);
+
+                c.plot.append("g").attr("class", "axis")
+                    .attr("transform", `translate(0, ${c.innerH})`)
+                    .call(d3.axisBottom(x).ticks(6, "~s"));
+                c.plot.append("g").attr("class", "axis").call(d3.axisLeft(y));
+                c.plot.append("text").attr("x", c.innerW / 2).attr("y", c.innerH + 38)
+                    .attr("text-anchor", "middle")
+                    .style("font-size", "var(--text-md)").style("fill", "#555")
+                    .text("GDP per capita (log)");
+
+                const dots = c.plot.append("g").selectAll("circle").data(data).join("circle")
+                    .attr("cx", d => x(d.gdpPercap))
+                    .attr("cy", d => y(d.lifeExp))
+                    .attr("r",  d => r(d.pop))
+                    .attr("fill", d => colour(d.continent))
+                    .attr("opacity", 0.7)
+                    .attr("stroke", "white").attr("stroke-width", 1);
+                dots.append("title").text(d => d.country);
+
+                const brush = d3.brushX()
+                    .extent([[0, 0], [c.innerW, c.innerH]])
+                    .on("brush end", ({ selection }) => {
+                        if (!selection) {
+                            dots.attr("opacity", 0.7);
+                            return;
+                        }
+                        const [x0, x1] = selection.map(x.invert);
+                        dots.attr("opacity", d =>
+                            (d.gdpPercap >= x0 && d.gdpPercap <= x1) ? 1 : 0.08);
+                    });
+
+                c.plot.append("g").attr("class", "brush").call(brush);
+            });
+        }
+
+        // ============================================================
+        // §3-§5 step demos
+        // ============================================================
+        d3.csv("./datasets/gapminder.csv", d => ({
+            country: d.country, continent: d.continent,
+            year: +d.year, lifeExp: +d.lifeExp,
+            pop: +d.pop, gdpPercap: +d.gdpPercap
+        })).then(rows => {
+            const continents = ["Africa", "Americas", "Asia", "Europe", "Oceania"];
+            const palette    = ["#009E73", "#D55E00", "#0072B2", "#CC79A7", "#E69F00"];
+            const colorOf    = d3.scaleOrdinal().domain(continents).range(palette);
+            const tip = d3.select("#tooltip");
+
+            function buildScatter(selector, height, opts = {}) {
+                const margin = opts.margin ??
+                    { top: 20, right: opts.legend ? 130 : 30, bottom: 50, left: 60 };
+                const c = makeCanvas(selector, height, { margin });
+                const x = d3.scaleLog().range([0, c.innerW])
+                    .domain(d3.extent(rows, d => d.gdpPercap)).nice();
+                const y = d3.scaleLinear().range([c.innerH, 0])
+                    .domain(d3.extent(rows, d => d.lifeExp)).nice();
+                const r = d3.scaleSqrt().range([3, 22])
+                    .domain(d3.extent(rows, d => d.pop));
+
+                c.plot.append("g").attr("class", "axis")
+                    .attr("transform", `translate(0, ${c.innerH})`)
+                    .call(d3.axisBottom(x).ticks(6, "~s"));
+                c.plot.append("g").attr("class", "axis").call(d3.axisLeft(y));
+
+                let active = null;
+                if (opts.legend) {
+                    const lg = c.plot.append("g")
+                        .attr("transform", `translate(${c.innerW + 20}, 10)`);
+                    lg.append("text").attr("y", -6).style("font-weight", "bold")
+                        .style("font-size", "var(--text-md)").text("Continent");
+                    const items = lg.selectAll("g.item").data(continents).join("g")
+                        .attr("class", "item")
+                        .attr("transform", (d, i) => `translate(0, ${i * 22 + 10})`)
+                        .style("cursor", "pointer")
+                        .on("click", (e, d) => {
+                            active = (active === d) ? null : d;
+                            items.attr("opacity", it => active && it !== active ? 0.3 : 1);
+                            redraw();
+                        });
+                    items.append("rect")
+                        .attr("x", -4).attr("y", -10).attr("width", 110).attr("height", 20)
+                        .attr("fill", "transparent");
+
+                    items.append("circle").attr("r", 8).attr("fill", d => colorOf(d))
+                        .attr("opacity", 0.85);
+                    items.append("text").attr("x", 16).attr("y", 4)
+                        .style("font-size", "var(--text-md)").text(d => d);
+                }
+
+                let year = opts.year ?? 2007;
+                let firstRender = true;
+                function redraw() {
+                    const yearData = rows.filter(d => d.year === year);
+                    const visible = active
+                        ? yearData.filter(d => d.continent === active)
+                        : yearData;
+                    const t = firstRender ? null : c.plot.transition().duration(450).ease(d3.easeCubicInOut);
+                    firstRender = false;
+                    c.plot.selectAll("circle.country")
+                        .data(visible, d => d.country)
+                        .join(
+                            enter => enter.append("circle").attr("class", "country")
+                                .attr("cx", d => x(d.gdpPercap))
+                                .attr("cy", d => y(d.lifeExp))
+                                .attr("r",  d => r(d.pop))
+                                .attr("fill", d => colorOf(d.continent))
+                                .attr("opacity", 0.7).attr("stroke", "white")
+                                .style("cursor", "pointer")
+                                .on("mouseover", function (e, d) {
+                                    d3.select(this).attr("stroke", "#1a1a1a").attr("stroke-width", 2);
+                                    tip.style("opacity", 1).html(
+                                        `<b>${d.country}</b><br>${d.continent} · ${d.year}<br>` +
+                                        `life exp: ${d.lifeExp.toFixed(1)} yr<br>` +
+                                        `GDP pc: ${d3.format("$,.0f")(d.gdpPercap)}`);
+                                })
+                                .on("mousemove", e => tip
+                                    .style("left", (e.pageX + 14) + "px")
+                                    .style("top", (e.pageY + 14) + "px"))
+                                .on("mouseout", function () {
+                                    d3.select(this).attr("stroke", "white").attr("stroke-width", 1);
+                                    tip.style("opacity", 0);
+                                }),
+                            update => update,
+                            exit => exit.remove()
+                        )
+                        .call(sel => (t ? sel.transition(t) : sel)
+                            .attr("cx", d => x(d.gdpPercap))
+                            .attr("cy", d => y(d.lifeExp))
+                            .attr("r",  d => r(d.pop)));
+                }
+                redraw();
+                return { setYear: (y0) => { year = y0; redraw(); } };
+            }
+
+            // §3 demo — hover only
+            buildScatter("#demo-hover-only", 380, { legend: false });
+
+            // §4 demo — click-to-toggle on a circle
+            (function buildClickToggle() {
+                const c = makeCanvas("#demo-click-filter", 380,
+                    { margin: { top: 20, right: 30, bottom: 50, left: 60 } });
+                const data = rows.filter(d => d.year === 2007);
+                const x = d3.scaleLog().range([0, c.innerW])
+                    .domain(d3.extent(rows, d => d.gdpPercap)).nice();
+                const y = d3.scaleLinear().range([c.innerH, 0])
+                    .domain(d3.extent(rows, d => d.lifeExp)).nice();
+                const r = d3.scaleSqrt().range([3, 22])
+                    .domain(d3.extent(rows, d => d.pop));
+                c.plot.append("g").attr("class", "axis")
+                    .attr("transform", `translate(0, ${c.innerH})`)
+                    .call(d3.axisBottom(x).ticks(6, "~s"));
+                c.plot.append("g").attr("class", "axis").call(d3.axisLeft(y));
+
+                let selected = null;
+
+                function render() {
+                    c.plot.selectAll("circle.country")
+                        .data(data, d => d.country)
+                        .join("circle")
+                            .attr("class", "country")
+                            .attr("cx", d => x(d.gdpPercap))
+                            .attr("cy", d => y(d.lifeExp))
+                            .attr("r",  d => r(d.pop))
+                            .attr("fill", d => colorOf(d.continent))
+                            .attr("stroke",       d => d.country === selected ? "#1a1a1a" : "white")
+                            .attr("stroke-width", d => d.country === selected ? 3 : 1)
+                            .attr("opacity",      d => selected && d.country !== selected ? 0.15 : 0.85)
+                            .style("cursor", "pointer")
+                            .on("click", (e, d) => {
+                                selected = (selected === d.country) ? null : d.country;
+                                render();
+                            })
+                            .on("mouseover", function (e, d) {
+                                tip.style("opacity", 1).html(
+                                    `<b>${d.country}</b><br>${d.continent} · ${d.year}<br>` +
+                                    `life exp: ${d.lifeExp.toFixed(1)} yr<br>` +
+                                    `GDP pc: ${d3.format("$,.0f")(d.gdpPercap)}`);
+                            })
+                            .on("mousemove", e => tip
+                                .style("left", (e.pageX + 14) + "px")
+                                .style("top", (e.pageY + 14) + "px"))
+                            .on("mouseout", () => tip.style("opacity", 0));
+                }
+                render();
+
+                c.root.on("click", function (e) {
+                    if (e.target.tagName !== "circle") {
+                        selected = null;
+                        render();
+                    }
+                });
+            })();
+
+            // §5 demo — hover + slider
+            const sliderChart = buildScatter("#demo-slider-only", 380, { legend: false, year: 1952 });
+            const sliderEl = document.getElementById("year-slider");
+            const sliderDisplay = document.getElementById("year-display-slider");
+            sliderEl.addEventListener("input", function () {
+                const yr = +this.value;
+                sliderDisplay.textContent = yr;
+                sliderChart.setYear(yr);
+            });
+        });
+    </script>
+</body>
+
+</html>

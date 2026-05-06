@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>10a §3 — key vs index join</title>
+    <style>
+        body { max-width: 1100px; margin: 2em auto; padding: 0 1.5em;
+            line-height: 1.55; color: #222; font-size: 16px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        h1 { font-size: 1.4em; margin-bottom: 0.3em; }
+        .lead { color: #555; margin-top: 0; }
+        .lead a { color: #0072B2; }
+        svg { width: 100%; height: auto; max-width: 100%; display: block;
+            border: 1px solid #ddd; background: #fafafa; }
+        .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 1em; margin-top: 0.6em; }
+        figure { margin: 0; }
+        figcaption { font-size: 0.95em; color: #555; margin-bottom: 0.4em; }
+        figcaption span { color: #888; }
+        button { padding: 0.4em 0.9em; font-size: 1em; cursor: pointer; }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="../_shared/utils.js"></script>
+</head>
+<body>
+    <h1>10a §3 — Key vs index join</h1>
+    <p class="lead">Two charts of the same five items share one shuffle button. The only difference
+        between them is the second argument to <code>.data()</code> — the left chart uses an index
+        join (no key), the right uses a key join (<code>d&nbsp;=&gt;&nbsp;d.id</code>). Click
+        <em>Shuffle</em> a few times and watch each circle's colour: with the index join the colour
+        stays glued to its slot; with the key join the colour follows the letter.
+        <a href="../../10a-update-pattern.html">Source tutorial &rarr;</a></p>
+
+    <p><button id="shuffle-btn">Shuffle the data</button></p>
+    <div class="pair">
+        <figure>
+            <figcaption><strong>Index join</strong> — <code>.data(data)</code><br>
+                <span>colours stay glued to positions; labels move</span></figcaption>
+            <div id="demo-index"></div>
+        </figure>
+        <figure>
+            <figcaption><strong>Key join</strong> — <code>.data(data, d&nbsp;=&gt;&nbsp;d.id)</code><br>
+                <span>circles slide to their new slots; each letter keeps its colour</span></figcaption>
+            <div id="demo-key"></div>
+        </figure>
+    </div>
+
+    <script>
+        // ─────────────────────────────────────────────────────────────────────
+        // five items A..E with one fixed colour each
+        const labels = ["A", "B", "C", "D", "E"];
+        const baseColors = {
+            A: "#0072B2", B: "#E69F00", C: "#009E73", D: "#D55E00", E: "#CC79A7"
+        };
+        let order = [...labels];
+
+        // build one chart (used twice, once per join mode)
+        // useKey: true → key join (.data(data, d => d.id)); false → index join
+        function buildChart(selector, useKey) {
+            const c = makeCanvas(selector, 180, {
+                width: 540,
+                margin: { top: 20, right: 20, bottom: 20, left: 20 }
+            });
+            const yMid = c.innerH / 2;
+            const slot = i => 30 + i * (c.innerW - 60) / 4;
+
+            return function render() {
+                const data = order.map(label => ({ id: label, label }));
+
+                // bind the data; key fn decides whether DOM elements track datum identity
+                const sel = c.plot.selectAll("g.item")
+                    .data(data, useKey ? (d => d.id) : null);
+
+                // exits fade out and are removed
+                sel.exit()
+                    .transition()
+                        .duration(300)
+                        .attr("opacity", 0)
+                    .remove();
+
+                // enters create one <g class="item"> per new datum;
+                // fill is set ONCE on enter — that is what makes the demo work
+                const enter = sel.enter()
+                    .append("g")
+                        .attr("class", "item")
+                        .attr("opacity", 1);
+
+                enter.append("circle")
+                    .attr("r", 22)
+                    .attr("stroke", "white")
+                    .attr("stroke-width", 2)
+                    .attr("fill", d => baseColors[d.label]);
+
+                enter.append("text")
+                    .attr("text-anchor", "middle")
+                    .attr("dy", 5)
+                    .style("font-size", "16px")
+                    .style("font-weight", "bold")
+                    .attr("fill", "white");
+
+                // merged enter+update slides each <g> to its slot, animating x position
+                sel.merge(enter)
+                    .transition()
+                        .duration(500)
+                        .attr("transform", (d, i) => `translate(${slot(i)}, ${yMid})`);
+
+                // text content updates on every render (datum's label may have changed)
+                sel.merge(enter)
+                    .select("text")
+                        .text(d => d.label);
+            };
+        }
+
+        const renderIndex = buildChart("#demo-index", false);
+        const renderKey   = buildChart("#demo-key",   true);
+        renderIndex();
+        renderKey();
+
+        document.getElementById("shuffle-btn").addEventListener("click", () => {
+            order = d3.shuffle([...order]);
+            renderIndex();
+            renderKey();
+        });
+    </script>
+</body>
+</html>

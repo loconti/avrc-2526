@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>10a §5 — sortable bar chart</title>
+    <style>
+        body { max-width: 1100px; margin: 2em auto; padding: 0 1.5em;
+            line-height: 1.55; color: #222; font-size: 16px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        h1 { font-size: 1.4em; margin-bottom: 0.3em; }
+        .lead { color: #555; margin-top: 0; }
+        .lead a { color: #0072B2; }
+        svg { width: 100%; height: auto; max-width: 100%; display: block;
+            border: 1px solid #ddd; background: #fafafa; }
+        .step h2 { font-size: 1.1em; margin: 1.4em 0 0.4em; }
+        .axis text { font-size: 13px; fill: #555; }
+        .axis path, .axis line { stroke: #bbb; }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="../_shared/utils.js"></script>
+</head>
+<body>
+    <h1>10a §5 — Sortable bar chart (the join in production)</h1>
+    <p class="lead">Top-15 most populous countries (UN 2023). Two charts share the same data and
+        the same dropdown: the left one uses an <strong>index join</strong>, the right one a
+        <strong>key join</strong> on <code>d.country</code>. Try the dropdown — only the second
+        chart keeps each country's colour glued to the country.
+        <a href="../../10a-update-pattern.html">Source tutorial &rarr;</a></p>
+
+    <p><label>sort by
+        <select id="sort">
+            <option value="value-desc">population (desc)</option>
+            <option value="value-asc">population (asc)</option>
+            <option value="name-asc">country A → Z</option>
+            <option value="name-desc">country Z → A</option>
+        </select></label></p>
+
+    <div class="step">
+        <h2>Step 1 — index join (the failure mode)</h2>
+        <div id="demo-index"></div>
+    </div>
+    <div class="step">
+        <h2>Step 2 — key join on <code>d.country</code></h2>
+        <div id="demo-key"></div>
+    </div>
+
+    <script>
+        // ─────────────────────────────────────────────────────────────────────
+        // top-15 most populous countries by 2023 estimate (UN), value in millions
+        const countries = [
+            { country: "India",         value: 1428.6 },
+            { country: "China",         value: 1425.7 },
+            { country: "United States", value:  339.9 },
+            { country: "Indonesia",     value:  277.5 },
+            { country: "Pakistan",      value:  240.5 },
+            { country: "Nigeria",       value:  223.8 },
+            { country: "Brazil",        value:  216.4 },
+            { country: "Bangladesh",    value:  173.0 },
+            { country: "Russia",        value:  144.4 },
+            { country: "Mexico",        value:  128.5 },
+            { country: "Ethiopia",      value:  126.5 },
+            { country: "Japan",         value:  123.3 },
+            { country: "Philippines",   value:  117.3 },
+            { country: "Egypt",         value:  112.7 },
+            { country: "DR Congo",      value:  102.3 }
+        ];
+
+        // four sort comparators, keyed by the dropdown value
+        const sortFns = {
+            "value-desc": (a, b) => d3.descending(a.value, b.value),
+            "value-asc":  (a, b) => d3.ascending(a.value, b.value),
+            "name-asc":   (a, b) => d3.ascending(a.country, b.country),
+            "name-desc":  (a, b) => d3.descending(a.country, b.country)
+        };
+
+        // shared sequential colour scale (blue intensity ~ population)
+        const colour = d3.scaleSequential(d3.interpolateBlues)
+            .domain([0, d3.max(countries, d => d.value)]);
+
+        // build one sortable bar chart; useKey toggles between index and key join
+        function buildSortable(selector, useKey) {
+            const c = makeCanvas(selector, 460, {
+                width: 800,
+                margin: { top: 20, right: 90, bottom: 20, left: 130 }
+            });
+            const data = countries.slice();
+
+            const x = d3.scaleLinear().range([0, c.innerW]);
+            const y = d3.scaleBand().range([0, c.innerH]).padding(0.18);
+            x.domain([0, d3.max(data, d => d.value)]).nice();
+
+            const xAxisG = c.plot.append("g")
+                .attr("class", "axis")
+                .attr("transform", `translate(0, ${c.innerH})`);
+            const yAxisG = c.plot.append("g")
+                .attr("class", "axis");
+
+            return function render() {
+                // re-sort the array, then re-domain the band scale to the new order
+                const sortKey = document.getElementById("sort").value;
+                data.sort(sortFns[sortKey]);
+                y.domain(data.map(d => d.country));
+
+                // bars — fill is set ONCE on enter so each colour is welded to whichever
+                // datum first occupied that DOM slot (or, with the key join, to the country)
+                const bars = c.plot.selectAll("rect.bar")
+                    .data(data, useKey ? (d => d.country) : null)
+                    .join(
+                        enter => enter.append("rect")
+                            .attr("class",  "bar")
+                            .attr("x",      0)
+                            .attr("height", y.bandwidth())
+                            .attr("fill",   d => colour(d.value))
+                            .attr("y",      d => y(d.country))
+                            .attr("width",  d => x(d.value)),
+                        update => update,
+                        exit   => exit.remove()
+                    );
+
+                // y/width are re-applied on every render so bars track the new order
+                bars
+                    .attr("y",     d => y(d.country))
+                    .attr("width", d => x(d.value));
+
+                // value labels — text content updates every render
+                const labels = c.plot.selectAll("text.value")
+                    .data(data, useKey ? (d => d.country) : null)
+                    .join(
+                        enter => enter.append("text")
+                            .attr("class",       "value")
+                            .attr("text-anchor", "start")
+                            .attr("dy",          4)
+                            .style("font-size",  "13px")
+                            .style("fill",       "#444")
+                            .attr("x",           d => x(d.value) + 6)
+                            .attr("y",           d => y(d.country) + y.bandwidth() / 2),
+                        update => update,
+                        exit   => exit.remove()
+                    );
+                labels
+                    .text(d => d3.format(",.1f")(d.value) + " M")
+                    .attr("x", d => x(d.value) + 6)
+                    .attr("y", d => y(d.country) + y.bandwidth() / 2);
+
+                xAxisG.call(d3.axisBottom(x).ticks(6).tickFormat(d3.format(",.0f")));
+                yAxisG.call(d3.axisLeft(y).tickSizeOuter(0));
+            };
+        }
+
+        const renderIndex = buildSortable("#demo-index", false);
+        const renderKey   = buildSortable("#demo-key",   true);
+        renderIndex();
+        renderKey();
+
+        document.getElementById("sort").addEventListener("change", () => {
+            renderIndex();
+            renderKey();
+        });
+    </script>
+</body>
+</html>

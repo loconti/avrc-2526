@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>10d §7-§8 — streamgraph playground</title>
+    <style>
+        body { max-width: 1100px; margin: 2em auto; padding: 0 1.5em;
+            line-height: 1.55; color: #222; font-size: 16px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        h1 { font-size: 1.4em; margin-bottom: 0.3em; }
+        .lead { color: #555; margin-top: 0; }
+        .lead a { color: #0072B2; }
+        svg { width: 100%; height: auto; max-width: 100%; display: block;
+            border: 1px solid #ddd; background: #fafafa; }
+        .axis text { font-size: 13px; fill: #555; }
+        .axis path, .axis line { stroke: #bbb; }
+        label { margin-right: 1em; }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="../_shared/utils.js"></script>
+</head>
+<body>
+    <h1>10d §7-§8 — Streamgraph playground</h1>
+    <p class="lead">12 synthetic series of random Gaussian bumps, drawn as a stacked area. Switch
+        the <em>offset</em> (baseline shape) and <em>order</em> (which layer sits in the middle) to
+        see how the same <code>d3.stack()</code> output produces wiggle, silhouette, expand, or a
+        flat-baseline stacked area.
+        <a href="../../10d-examples-gallery.html">Source tutorial &rarr;</a></p>
+
+    <p>
+        <label>offset
+            <select id="stream-offset">
+                <option value="none">none (flat baseline)</option>
+                <option value="silhouette">silhouette</option>
+                <option value="wiggle" selected>wiggle</option>
+                <option value="expand">expand (100%)</option>
+            </select></label>
+        <label>order
+            <select id="stream-order">
+                <option value="none">none</option>
+                <option value="insideOut" selected>insideOut</option>
+                <option value="ascending">ascending</option>
+                <option value="reverse">reverse</option>
+            </select></label>
+    </p>
+    <div id="demo"></div>
+
+    <script>
+        // ─────────────────────────────────────────────────────────────────────
+        // 12 synthetic series × 200 time points; each series is a sum of
+        // random Gaussian bumps so series rise and fall at different times —
+        // exactly what makes wiggle / silhouette / none look different
+        const N_SERIES = 12;
+        const N_POINTS = 200;
+        const N_BUMPS  = 2;
+        const rng = d3.randomLcg(7);
+        function bump(arr) {
+            const a = 1.5 + 1.5 * rng();
+            const b = rng();
+            const c = 8 + 6 * rng();
+            for (let i = 0; i < arr.length; i++) {
+                const w = (i / arr.length - b) * c;
+                arr[i] += a * Math.exp(-w * w);
+            }
+        }
+        const layers = d3.range(N_SERIES).map(() => {
+            const arr = new Array(N_POINTS).fill(0);
+            for (let j = 0; j < N_BUMPS; j++) bump(arr);
+            return arr;
+        });
+        const seriesKeys = d3.range(N_SERIES).map(i => `s${i + 1}`);
+        const rows = d3.range(N_POINTS).map(t => {
+            const row = { t };
+            seriesKeys.forEach((k, i) => row[k] = layers[i][t]);
+            return row;
+        });
+        const colour = d3.scaleOrdinal()
+            .domain(seriesKeys)
+            .range(d3.quantize(t => d3.interpolateViridis(0.05 + 0.85 * t), N_SERIES));
+
+        const c = makeCanvas("#demo", 380, {
+            margin: { top: 16, right: 40, bottom: 40, left: 50 }
+        });
+        const x = d3.scaleLinear()
+            .domain([0, N_POINTS - 1])
+            .range([0, c.innerW]);
+
+        const offsets = {
+            none:        d3.stackOffsetNone,
+            expand:      d3.stackOffsetExpand,
+            silhouette:  d3.stackOffsetSilhouette,
+            wiggle:      d3.stackOffsetWiggle
+        };
+        const orders = {
+            none:        d3.stackOrderNone,
+            insideOut:   d3.stackOrderInsideOut,
+            ascending:   d3.stackOrderAscending,
+            reverse:     d3.stackOrderReverse
+        };
+
+        // axis groups + the layer group, all created once
+        const xAxisG = c.plot.append("g").attr("class", "axis");
+        const yAxisG = c.plot.append("g").attr("class", "axis");
+        const layerG = c.plot.append("g");
+
+        function render() {
+            const offsetKey = document.getElementById("stream-offset").value;
+            const orderKey  = document.getElementById("stream-order").value;
+
+            // build the stack for the chosen offset/order, then derive y from the result
+            const stack = d3.stack()
+                .keys(seriesKeys)
+                .offset(offsets[offsetKey])
+                .order(orders[orderKey]);
+            const series = stack(rows);
+
+            const yMin = d3.min(series, layer => d3.min(layer, d => d[0]));
+            const yMax = d3.max(series, layer => d3.max(layer, d => d[1]));
+            const y = d3.scaleLinear()
+                .domain([yMin, yMax])
+                .range([c.innerH, 0]);
+
+            // one <path> per layer; curveBasis smooths the area
+            const area = d3.area()
+                .x(d => x(d.data.t))
+                .y0(d => y(d[0]))
+                .y1(d => y(d[1]))
+                .curve(d3.curveBasis);
+
+            layerG.selectAll("path")
+                .data(series, d => d.key)
+                .join("path")
+                    .transition()
+                        .duration(700)
+                        .attr("d",       area)
+                        .attr("fill",    d => colour(d.key))
+                        .attr("opacity", 0.9);
+
+            xAxisG
+                .attr("transform", `translate(0, ${c.innerH})`)
+                .call(d3.axisBottom(x).ticks(8).tickFormat(d => `t=${d}`));
+            yAxisG.transition()
+                .duration(500)
+                .call(offsetKey === "expand"
+                    ? d3.axisLeft(y).tickFormat(d3.format(".0%"))
+                    : d3.axisLeft(y).ticks(5));
+        }
+        render();
+
+        document.getElementById("stream-offset").addEventListener("change", render);
+        document.getElementById("stream-order").addEventListener("change", render);
+    </script>
+</body>
+</html>

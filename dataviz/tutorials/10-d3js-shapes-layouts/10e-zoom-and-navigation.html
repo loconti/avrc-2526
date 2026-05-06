@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>10e — Zoom and Pan</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="./_shared/chart.js?v=3"></script>
+    <link rel="stylesheet" href="./_shared/chart.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/styles/github.min.css">
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/highlight.min.js"></script>
+    <script>document.addEventListener("DOMContentLoaded", () => hljs.highlightAll());</script>
+</head>
+
+<body>
+    <h1>10e — Zoom and Pan</h1>
+    <p class="lead">10a–10c made the chart respond to <em>change</em>, <em>time</em>, and <em>input</em>;
+        10d added <em>composition</em> via layouts. The piece left is what happens when the chart has more data than fits comfortably on the screen. The reader needs
+        to <em>zoom</em> in on a region and <em>pan</em> around. <code>d3.zoom</code> attaches the
+        standard zoom + pan affordances (mouse wheel, drag, double-click, pinch on touch) to a target
+        element and emits a transform on every change. We build the canonical zoomable scatterplot in
+        four visible stages on the gapminder 2007 slice from 09e.</p>
+
+    <h2>How this tutorial is organised</h2>
+    <p>Three blocks, in order:</p>
+    <ol>
+        <li><strong>What <code>d3.zoom</code> is</strong> (§1). A short tour of the
+            <em>behaviour</em> object: how it is configured, what events it fires, what an
+            <em>event transform</em> looks like.</li>
+        <li><strong>Build a zoomable scatterplot in four visible steps</strong> (§2-§5). Static
+            chart → naïve group transform → rescale-the-scales → clip to the plot rectangle. Each
+            step adds <em>one</em> idea on top of the previous so the reason for every line is
+            visible.</li>
+        <li><strong>When to use which pattern, plus a production checklist</strong>
+            (§6-§7). Group-transform vs rescale-scales (the two valid recipes for different chart
+            families), then the things you actually need to think about before shipping —
+            responsive sizing, accessibility, SVG vs canvas, animation honesty.</li>
+    </ol>
+
+    <h2>1. <code>d3.zoom</code> in one minute</h2>
+    <p>Like <code>d3.brush</code> from <code>10c §8</code>, <code>d3.zoom</code> is a
+        <strong>behaviour object</strong>: you configure it, then apply it to an SVG element with
+        <code>selection.call(zoom)</code>. The behaviour wires up wheel, drag, double-click, and
+        touch pinch listeners on that element, and on every change it fires a
+        <code>"zoom"</code> event. Your job is to read the event's <code>transform</code> and
+        translate it into visual updates:</p>
+    <pre><code>const zoom = d3.zoom()
+    .scaleExtent([1, 16])                           // zoom range: 1× to 16×
+    .extent([[0, 0], [innerW, innerH]])             // where in the SVG the zoom applies
+    .translateExtent([[0, 0], [innerW, innerH]])    // pan stops at the plot edges
+    .on("zoom", (event) =&gt; {
+        const t = event.transform;                  // a {k, x, y} object
+        // … apply t to your marks (next sections show how)
+    });
+
+svg.call(zoom);                                     // attach to the SVG</code></pre>
+    <p>Four concepts to name now so the next four sections read smoothly:</p>
+    <ul>
+        <li><strong><code>scaleExtent([min, max])</code></strong> — the zoom multiplier range.
+            <code>[1, 16]</code> means the user can zoom up to 16× in but no further out than the
+            initial 1×. Forgetting to set this and your reader can scroll-wheel themselves into
+            sub-pixel land.</li>
+        <li><strong><code>extent([[x0, y0], [x1, y1]])</code></strong> — the pixel rectangle of
+            the SVG that the zoom <em>captures gestures from</em>. Usually this is the inner plot
+            area.</li>
+        <li><strong><code>translateExtent([[x0, y0], [x1, y1]])</code></strong> — the rectangle
+            the user is allowed to <em>pan to</em>. Without it, the reader can drag the chart
+            entirely off-screen and lose it. Set it equal to <code>extent</code> for the
+            obvious-correct behaviour: pan stops at the edges of the plot.</li>
+        <li><strong>The transform object</strong> — three numbers:
+            <code>k</code> (zoom multiplier, ≥ 1 with our scale-extent), <code>x</code> and
+            <code>y</code> (translation in pixels). Together they describe an affine transform.
+            You'll see two ways to consume it below: applying it directly as an SVG
+            <code>transform</code> attribute (§3), or using its
+            <code>.rescaleX</code> / <code>.rescaleY</code> methods to rebuild the scales (§4-§5).</li>
+    </ul>
+    <p>The <strong>gestures</strong> the behaviour wires up automatically — try them on every demo
+        from §3 onward:</p>
+    <ul>
+        <li><strong>Mouse wheel</strong> (or trackpad scroll) — zoom in / out, centred on the
+            cursor.</li>
+        <li><strong>Click and drag</strong> — pan.</li>
+        <li><strong>Double-click</strong> — zoom in 2×, centred on the click.</li>
+        <li><strong>Shift + double-click</strong> — zoom out 2×.</li>
+        <li><strong>Touch pinch</strong> — zoom (mobile / trackpads that support gestures).</li>
+    </ul>
+
+    <h2>2. Static scatterplot — the baseline</h2>
+    <p>Start from a normal scatterplot drawn into the inner <code>g</code> with axes at the edges.
+        Wheel and drag do nothing here — this is the baseline that the next three steps will
+        progressively make navigable:</p>
+    <pre><code>const xAxisG = plot.append("g")
+    .attr("transform", `translate(0, ${innerH})`)
+    .call(d3.axisBottom(x));
+const yAxisG = plot.append("g").call(d3.axisLeft(y));
+
+plot.selectAll("circle").data(data).join("circle")
+    .attr("cx", d =&gt; x(d.gdpPercap))
+    .attr("cy", d =&gt; y(d.lifeExp))
+    .attr("r",  d =&gt; r(d.pop))
+    .attr("fill", d =&gt; colour(d.continent));</code></pre>
+    <div class="container" id="demo-zoom-step1"></div>
+
+    <h2>3. Naïve zoom — transform a wrapping <code>&lt;g&gt;</code></h2>
+    <p><strong>What changes from §2:</strong> we wrap the dots in a new <code>&lt;g&gt;</code> and
+        attach a zoom behaviour that writes the event's transform onto that group. Nothing else
+        moves.</p>
+    <p>SVG composes the transform with whatever is inside the wrapper, so dots scale and translate
+        as one. Wheel and drag now work — but the axes live <em>outside</em> the wrapper, so they
+        don't move. As you zoom in, dots and axes drift apart and the axis labels stop matching
+        the data:</p>
+    <pre><code>const zoomG = plot.append("g");                    // ← the wrapper
+zoomG.selectAll("circle").data(data).join("circle")
+    .attr("cx", d =&gt; x(d.gdpPercap))
+    .attr("cy", d =&gt; y(d.lifeExp))
+    .attr("r",  d =&gt; r(d.pop));
+
+const zoom = d3.zoom().scaleExtent([1, 16])
+    .on("zoom", ({ transform }) =&gt; {
+        zoomG.attr("transform", transform);        // ← whole group moves
+    });
+svg.call(zoom);</code></pre>
+    <p>Three things this code does, in order:</p>
+    <ul>
+        <li><strong><code>plot.append("g")</code></strong> creates the wrapper. All zoomable marks
+            become its descendants. SVG transforms cascade to descendants, so transforming the
+            wrapper transforms everything inside it.</li>
+        <li><strong><code>svg.call(zoom)</code></strong> attaches the behaviour to the SVG. After
+            this call, wheel / drag / double-click events on the SVG are intercepted by the zoom
+            behaviour and translated into a moving transform.</li>
+        <li><strong><code>zoomG.attr("transform", transform)</code></strong> — the transform
+            object's <code>toString()</code> produces a valid SVG transform string
+            (<code>translate(120, 80) scale(2.5)</code>), so passing it as the
+            <code>transform</code> attribute applies it directly. <em>Everything</em> inside the
+            wrapper — including the dots' <code>r</code> and any stroke widths — scales with
+            <code>k</code>.</li>
+    </ul>
+    <p>Try wheel-zooming the chart below, or click-and-drag to pan. The dots scale but the axis
+        numbers stay put. Wrong:</p>
+    <div class="container" id="demo-zoom-step2"></div>
+
+    <h2>4. Rescale the scales instead</h2>
+    <p><strong>What changes from §3:</strong> we drop the wrapper group entirely. The dots go
+        back into <code>plot</code>. The zoom handler now writes <em>data-coordinate</em> changes
+        instead of an SVG transform — it builds rescaled copies of <code>x</code> and
+        <code>y</code> and reapplies them to the dots and the axes.</p>
+    <p>This is the fix from the
+        <a href="https://observablehq.com/@d3/zoomable-scatterplot" target="_blank">canonical Observable
+        example</a>. The transform's <code>rescaleX(x)</code> / <code>rescaleY(y)</code> methods
+        produce <strong>rescaled copies of the scales</strong>; reapplying those copies to
+        <em>both</em> the dots' <code>cx</code> / <code>cy</code> <em>and</em> the axis generators
+        keeps them in sync — they are computed from the same rescaled scale:</p>
+    <pre><code>const zoom = d3.zoom().scaleExtent([1, 16])
+    .on("zoom", ({ transform }) =&gt; {
+        const zx = transform.rescaleX(x);          // rescaled x scale
+        const zy = transform.rescaleY(y);          // rescaled y scale
+        xAxisG.call(d3.axisBottom(zx));            // redraw axes against the new scales
+        yAxisG.call(d3.axisLeft(zy));
+        dots.attr("cx", d =&gt; zx(d.gdpPercap))     // reposition dots
+            .attr("cy", d =&gt; zy(d.lifeExp));
+    });
+svg.call(zoom);</code></pre>
+    <p>Three points worth saying out loud:</p>
+    <ul>
+        <li><strong><code>transform.rescaleX(x)</code></strong> returns a <em>new</em> scale with
+            the same domain as <code>x</code> but a range modified by <code>k</code> and
+            <code>transform.x</code>. The original <code>x</code> is untouched — you can use both,
+            or zero them out by resetting the zoom transform.</li>
+        <li><strong>Why this is better than the group transform.</strong> When you rescale the
+            scales, every visual that derives from those scales (axes, gridlines, dots, lines)
+            recomputes against the new ranges and stays consistent. With the group transform you
+            have to remember which elements are inside the wrapper and which are outside.</li>
+        <li><strong>Stroke widths and radii stay constant in screen pixels</strong> because the
+            dot's <code>r</code> attribute is unchanged — only <code>cx</code> / <code>cy</code>
+            move. With the group-transform pattern, <code>r</code> would scale with <code>k</code>
+            (a 5-pixel dot becomes 80 pixels at 16× zoom), which is rarely what you want.</li>
+    </ul>
+    <p>Wheel-zoom and drag — the axis ticks now match the dot positions at every level. But: pan to
+        the edge and dots leak <em>outside</em> the plot rectangle, over the axis, into the
+        margins:</p>
+    <div class="container" id="demo-zoom-step3"></div>
+
+    <h2>5. Clip to the plot rectangle</h2>
+    <p><strong>What changes from §4:</strong> the rescale-scales handler is unchanged. We add
+        <em>one</em> ingredient on top — a <code>clipPath</code> declared in the SVG's
+        <code>defs</code>, applied to a new group that wraps the dots. Anything repositioned
+        outside the plot is invisible because SVG only renders the parts of children that fall
+        inside the clip rectangle:</p>
+    <pre><code>svg.append("defs").append("clipPath").attr("id", "clip")
+    .append("rect").attr("width", innerW).attr("height", innerH);
+
+const dotsG = plot.append("g").attr("clip-path", "url(#clip)");
+// dots are appended into dotsG instead of plot directly
+</code></pre>
+    <p>Two implementation notes:</p>
+    <ul>
+        <li><strong>The <code>clipPath</code> rectangle is in plot-coordinates and has a fixed
+            size</strong> (<code>innerW × innerH</code>). It does <em>not</em> move with the zoom
+            transform. That is exactly what we want: the clip is a window onto the chart, the
+            scales' rescaling moves the data through that window.</li>
+        <li><strong>The <code>defs</code> element</strong> is SVG's way of declaring reusable
+            content (clip paths, markers, gradients) that is rendered only when referenced. The
+            <code>url(#clip)</code> string in <code>clip-path</code> is what activates it.</li>
+        <li><strong>If a page has more than one chart</strong>, give each clip-path a unique
+            <code>id</code> (e.g. <code>"clip-" + chartName</code>) — SVG ids share a global
+            namespace, so two charts both using <code>id="clip"</code> will reference the
+            <em>first</em> one and the second chart will look unclipped.</li>
+    </ul>
+    <p>Try every gesture from the §1 cheatsheet — dots stay inside the plot, axes stay aligned,
+        no overflow:</p>
+    <div class="container" id="demo-zoom"></div>
+
+    <h2>6. Two patterns, two contexts</h2>
+    <p>You have just seen both valid recipes — they are not redundant; they suit different chart
+        families. <strong>Rescale-the-scales</strong> (§4-§5) is the right default for any chart
+        with <strong>axes</strong>: scatterplots, line charts, bar charts. <strong>Transform the
+        wrapper group</strong> (§3) is fine for diagrams <em>without</em> axes — networks,
+        treemaps, abstract layouts — and is what L11 / L12 use for force-directed graphs and
+        chord diagrams.</p>
+    <ul>
+        <li><strong>Rescale-scales (axes-aware).</strong> Axes follow naturally, stroke widths and
+            mark radii stay constant in screen pixels, the static <code>clipPath</code> works
+            correctly. Use this whenever there are tick labels you want to remain readable.</li>
+        <li><strong>Group-transform (no axes).</strong> Simpler code, but everything inside the
+            wrapper scales with <code>k</code>. Combine with <code>vector-effect:
+            non-scaling-stroke</code> on edges to keep edge widths constant under scaling, and
+            counter-scale node radii via <code>r × (1 / k)</code> if you don't want a 5-pixel node
+            to become an 80-pixel blob at 16× zoom.</li>
+    </ul>
+    <p>A practical rule: if your chart has <code>d3.axisBottom</code> / <code>axisLeft</code>
+        anywhere, use rescale-scales. If your chart's <em>data</em> coordinates are abstract (force
+        layout x/y, treemap rectangles), use group-transform.</p>
+
+    <h2>7. Production checklist</h2>
+    <p>Five questions to ask of any chart in this course before you call it done:</p>
+    <ul>
+        <li><strong>Responsive sizing.</strong> Set <code>viewBox="0 0 W H"</code> on the SVG and
+            <code>width: 100%; height: auto;</code> in CSS. The chart now scales with the container —
+            the example files in <code>examples/</code> follow this pattern. For window-resize relayout
+            of force or sankey, listen to <code>resize</code> and rebuild.</li>
+        <li><strong>Accessible colour palettes.</strong> The Tableau 10 / Viridis schemes used here are
+            colourblind-aware. For a custom palette, check it through a simulator (e.g.
+            <a href="https://www.color-blindness.com/coblis-color-blindness-simulator/" target="_blank">
+            Coblis</a>). Avoid red-green binary contrasts. Don't rely on colour alone — pair colour
+            with shape, position, or label.</li>
+        <li><strong>Accessibility (a11y).</strong> SVGs aren't accessible by default. Add
+            <code>&lt;title&gt;</code> children to interactive marks for hover-tooltip text;
+            <code>aria-label</code> on the chart's container summarises the data; consider rendering an
+            equivalent <code>&lt;table&gt;</code> with <code>aria-hidden="true"</code> on the SVG for
+            screen readers. The
+            <a href="https://www.a11yproject.com/posts/accessible-svg/" target="_blank">A11Y Project's
+            SVG guide</a> is the standard reference.</li>
+        <li><strong>SVG vs Canvas.</strong> SVG is the default — every example in L9–L12 uses it. For
+            datasets above ~5,000 marks redraw becomes sluggish; switch to <code>&lt;canvas&gt;</code>
+            and draw to its 2D context inside the same <code>tick</code> handler. The data join idea
+            still applies — you just iterate the array and call <code>ctx.beginPath() / arc() /
+            fill()</code> instead of binding DOM elements.
+            <a href="https://observablehq.com/@d3/force-directed-graph-canvas" target="_blank">Mike
+            Bostock's canvas force-directed graph</a> is the canonical example.</li>
+        <li><strong>Animation honesty.</strong> Transitions should explain change, not perform.
+            Default to <em>no</em> transition for high-frequency interactions where the reader
+            expects an immediate response (a brush, a zoom). Use a short transition (300-500 ms)
+            for low-frequency state changes where the eye benefits from following motion: a click
+            that swaps a dataset, a slider that <em>scrubs</em> across discrete years (as in
+            <code>10c §5</code> — D3 interrupts in-flight transitions cleanly when the user keeps
+            dragging). The wrong default is animating <em>every</em> change at 700 ms; that turns
+            an interactive chart into a slideshow.</li>
+    </ul>
+
+    <div class="note"><strong>Takeaway.</strong> Navigation is the fifth and final L10 move:
+        <em>change → time → input → composition → navigation</em>. With <code>d3.zoom</code> and the
+        rescale-scales pattern, any chart with axes accommodates more data than fits on one screen.
+        Combined with the four mechanisms from 10a–10d, you have the full advanced D3 vocabulary. The
+        next two lectures (L11 networks, L12 chord/sankey/bundling) reuse every one of these patterns
+        on richer chart types.</div>
+
+    <h2>References</h2>
+    <ul>
+        <li><a href="https://github.com/d3/d3-zoom" target="_blank">d3-zoom</a> — the zoom behaviour
+            module.</li>
+        <li><a href="https://observablehq.com/@d3/zoomable-scatterplot" target="_blank">Observable —
+            Zoomable scatterplot</a> (Mike Bostock — the rescale-scales pattern).</li>
+        <li><a href="https://observablehq.com/@d3/zoom" target="_blank">Observable — d3.zoom</a>
+            primer.</li>
+        <li><a href="https://observablehq.com/@d3/brush-and-zoom" target="_blank">Observable — Brush and
+            zoom</a> (linked-views pattern, expands on what we did in 10c).</li>
+    </ul>
+
+    <p class="tutorial-nav"><a href="10d-examples-gallery.html">← 10d — Layouts</a> ·
+        <a href="index.html">L10 index</a> ·
+        <a href="../11-networks-d3js/index.html">L11 — Networks in D3 →</a></p>
+
+    <script>
+        // ---------- §10e. zoom — built up step by step ----------
+        d3.csv("./datasets/gapminder.csv", d => ({
+            country: d.country,
+            continent: d.continent,
+            year: +d.year,
+            gdpPercap: +d.gdpPercap,
+            lifeExp: +d.lifeExp,
+            pop: +d.pop
+        })).then(raw => {
+            const data = raw.filter(d => d.year === 2007);
+            const colour = d3.scaleOrdinal().range(d3.schemeTableau10)
+                .domain([...new Set(data.map(d => d.continent))]);
+            const zoomMargin = { top: 20, right: 30, bottom: 40, left: 60 };
+
+            function buildScatter(selector, height, opts = {}) {
+                const c = makeCanvas(selector, height, { margin: zoomMargin });
+                const x = d3.scaleLog().domain([200, 100000]).range([0, c.innerW]);
+                const y = d3.scaleLinear().domain([35, 85]).range([c.innerH, 0]);
+                const r = d3.scaleSqrt().domain([0, d3.max(data, d => d.pop)])
+                    .range([2, 18]);
+
+                const xAxisG = c.plot.append("g").attr("class", "axis")
+                    .attr("transform", `translate(0, ${c.innerH})`)
+                    .call(d3.axisBottom(x).ticks(6, "~s"));
+                const yAxisG = c.plot.append("g").attr("class", "axis")
+                    .call(d3.axisLeft(y));
+                c.plot.append("text").attr("x", c.innerW / 2).attr("y", c.innerH + 36)
+                    .attr("text-anchor", "middle")
+                    .style("font-size", "var(--text-md)").style("fill", "#555")
+                    .text("GDP per capita (log)");
+                c.plot.append("text").attr("transform", "rotate(-90)")
+                    .attr("x", -c.innerH / 2).attr("y", -42)
+                    .attr("text-anchor", "middle")
+                    .style("font-size", "var(--text-md)").style("fill", "#555")
+                    .text("life expectancy");
+
+                let parent = c.plot;
+                if (opts.clip) {
+                    const clipId = "zoom-clip-" + selector.slice(1);
+                    c.root.append("defs").append("clipPath").attr("id", clipId)
+                        .append("rect").attr("width", c.innerW).attr("height", c.innerH);
+                    parent = c.plot.append("g").attr("clip-path", `url(#${clipId})`);
+                } else if (opts.wrapperGroup) {
+                    parent = c.plot.append("g");
+                }
+                const dots = parent.selectAll("circle").data(data).join("circle")
+                    .attr("cx", d => x(d.gdpPercap))
+                    .attr("cy", d => y(d.lifeExp))
+                    .attr("r",  d => r(d.pop))
+                    .attr("fill", d => colour(d.continent))
+                    .attr("opacity", 0.7)
+                    .attr("stroke", "white").attr("stroke-width", 1);
+                dots.append("title").text(d => `${d.country}\n${d.lifeExp.toFixed(1)} yr`);
+
+                return { c, x, y, xAxisG, yAxisG, dots, parent };
+            }
+
+            buildScatter("#demo-zoom-step1", 360);
+
+            {
+                const { c, parent } = buildScatter("#demo-zoom-step2", 360,
+                    { wrapperGroup: true });
+                c.root.call(d3.zoom()
+                    .scaleExtent([1, 16])
+                    .extent([[0, 0], [c.innerW, c.innerH]])
+                    .translateExtent([[0, 0], [c.innerW, c.innerH]])
+                    .on("zoom", ({ transform }) => {
+                        parent.attr("transform", transform);
+                    }));
+            }
+
+            {
+                const { c, x, y, xAxisG, yAxisG, dots } =
+                    buildScatter("#demo-zoom-step3", 360);
+                c.root.call(d3.zoom()
+                    .scaleExtent([1, 16])
+                    .extent([[0, 0], [c.innerW, c.innerH]])
+                    .translateExtent([[0, 0], [c.innerW, c.innerH]])
+                    .on("zoom", ({ transform }) => {
+                        const zx = transform.rescaleX(x);
+                        const zy = transform.rescaleY(y);
+                        xAxisG.call(d3.axisBottom(zx).ticks(6, "~s"));
+                        yAxisG.call(d3.axisLeft(zy));
+                        dots.attr("cx", d => zx(d.gdpPercap))
+                            .attr("cy", d => zy(d.lifeExp));
+                    }));
+            }
+
+            {
+                const { c, x, y, xAxisG, yAxisG, dots } =
+                    buildScatter("#demo-zoom", 480, { clip: true });
+                c.root.call(d3.zoom()
+                    .scaleExtent([1, 16])
+                    .extent([[0, 0], [c.innerW, c.innerH]])
+                    .translateExtent([[0, 0], [c.innerW, c.innerH]])
+                    .on("zoom", ({ transform }) => {
+                        const zx = transform.rescaleX(x);
+                        const zy = transform.rescaleY(y);
+                        xAxisG.call(d3.axisBottom(zx).ticks(6, "~s"));
+                        yAxisG.call(d3.axisLeft(zy));
+                        dots.attr("cx", d => zx(d.gdpPercap))
+                            .attr("cy", d => zy(d.lifeExp));
+                    }));
+            }
+        });
+    </script>
+</body>
+
+</html>

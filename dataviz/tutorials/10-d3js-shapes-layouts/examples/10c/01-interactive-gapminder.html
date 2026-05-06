@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>10c §6 — interactive Gapminder capstone</title>
+    <style>
+        body { max-width: 1100px; margin: 2em auto; padding: 0 1.5em;
+            line-height: 1.55; color: #222; font-size: 16px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        h1 { font-size: 1.4em; margin-bottom: 0.3em; }
+        .lead { color: #555; margin-top: 0; }
+        .lead a { color: #0072B2; }
+        svg { width: 100%; height: auto; max-width: 100%; display: block;
+            border: 1px solid #ddd; background: #fafafa; }
+        .controls { margin: 1em 0 0.5em; }
+        .controls label { display: inline-block; min-width: 8em; }
+        #year { width: 320px; vertical-align: middle; }
+        .axis text { font-size: 13px; fill: #555; }
+        .axis path, .axis line { stroke: #bbb; }
+        #tooltip {
+            position: absolute; pointer-events: none;
+            background: rgba(20, 20, 20, 0.92); color: white;
+            padding: 0.4em 0.7em; border-radius: 4px;
+            font-size: 12px; line-height: 1.4;
+            opacity: 0; transition: opacity 0.15s;
+        }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="../_shared/utils.js"></script>
+</head>
+<body>
+    <h1>10c §6 — Interactive Gapminder capstone</h1>
+    <p class="lead">Everything from <code>10c</code> in one chart: <strong>hover</strong> a circle
+        for details, <strong>click</strong> a circle to toggle-select that country (click again,
+        or click the empty background, to clear), <strong>click</strong> a continent in the legend
+        to filter, <strong>drag</strong> the slider to change the year. Circles glide between
+        years against one shared 450 ms transition.
+        <a href="../../10c-interactions-capstone.html">Source tutorial &rarr;</a></p>
+
+    <p class="controls">
+        <label>Year: <span id="year-display">1952</span></label>
+        <input type="range" id="year" min="1952" max="2007" step="5" value="1952">
+    </p>
+    <div id="chart"></div>
+    <div id="tooltip"></div>
+
+    <script>
+        // ─────────────────────────────────────────────────────────────────────
+        // continent → colour mapping (one ordinal scale shared across the chart)
+        const continents = ["Africa", "Americas", "Asia", "Europe", "Oceania"];
+        const palette    = ["#009E73", "#D55E00", "#0072B2", "#CC79A7", "#E69F00"];
+        const colorOf    = d3.scaleOrdinal()
+            .domain(continents)
+            .range(palette);
+
+        // canvas: 800 × 480, with a wider right margin to leave room for the legend
+        const c = makeCanvas("#chart", 480, {
+            width: 800,
+            margin: { top: 30, right: 150, bottom: 56, left: 64 }
+        });
+        const tip = d3.select("#tooltip");
+        const yearDisplay = document.getElementById("year-display");
+
+        // state — three variables, the only thing render() reads
+        let allData = [];
+        let currentYear = 1952;
+        let activeContinent = null;       // null | continent name
+        let selectedCountry = null;       // null | country name
+
+        // scales (domain set after the CSV loads; range fixed in pixels / colours)
+        const x = d3.scaleLog().range([0, c.innerW]);
+        const y = d3.scaleLinear().range([c.innerH, 0]);
+        const r = d3.scaleSqrt().range([3, 32]);
+
+        // axis groups — created once, .call()'d on every render
+        const xAxisG = c.plot.append("g")
+            .attr("class", "axis")
+            .attr("transform", `translate(0, ${c.innerH})`);
+        const yAxisG = c.plot.append("g")
+            .attr("class", "axis");
+
+        // axis titles
+        c.plot.append("text")
+            .attr("x", c.innerW / 2)
+            .attr("y", c.innerH + 40)
+            .attr("text-anchor", "middle")
+            .style("font-size", "13px")
+            .attr("fill", "#555")
+            .text("GDP per capita (log scale, USD)");
+
+        c.plot.append("text")
+            .attr("transform", `translate(-44, ${c.innerH / 2}) rotate(-90)`)
+            .attr("text-anchor", "middle")
+            .style("font-size", "13px")
+            .attr("fill", "#555")
+            .text("Life expectancy (years)");
+
+        // legend — one row per continent; click toggles the activeContinent filter
+        const legendG = c.plot.append("g")
+            .attr("transform", `translate(${c.innerW + 20}, 10)`);
+
+        legendG.append("text")
+            .attr("y", -6)
+            .style("font-weight", "bold")
+            .style("font-size", "13px")
+            .text("Continent");
+
+        const legendItems = legendG.selectAll("g.item")
+            .data(continents)
+            .join("g")
+                .attr("class", "item")
+                .attr("transform", (d, i) => `translate(0, ${i * 22 + 10})`)
+                .style("cursor", "pointer")
+                .on("click", (event, d) => {
+                    // stop propagation so the SVG-level background-clear does not fire
+                    event.stopPropagation();
+                    activeContinent = (activeContinent === d) ? null : d;
+                    legendItems.attr("opacity", item =>
+                        activeContinent && item !== activeContinent ? 0.3 : 1);
+                    render();
+                });
+
+        // invisible hit-target so clicks land anywhere on the row
+        legendItems.append("rect")
+            .attr("x", -4).attr("y", -10)
+            .attr("width", 110).attr("height", 20)
+            .attr("fill", "transparent");
+
+        legendItems.append("circle")
+            .attr("r", 8)
+            .attr("fill", d => colorOf(d))
+            .attr("opacity", 0.85);
+
+        legendItems.append("text")
+            .attr("x", 16).attr("y", 4)
+            .style("font-size", "13px")
+            .text(d => d);
+
+        legendG.append("text")
+            .attr("y", continents.length * 22 + 30)
+            .style("font-size", "11px")
+            .attr("fill", "#888")
+            .text("(click to filter)");
+
+        // load CSV, set scale domains from the full dataset (so axes don't jump
+        // while the user scrubs the year), then render the first frame
+        d3.csv("../../datasets/gapminder.csv", d => ({
+            country:   d.country,
+            continent: d.continent,
+            year:     +d.year,
+            lifeExp:  +d.lifeExp,
+            pop:      +d.pop,
+            gdpPercap:+d.gdpPercap
+        })).then(rows => {
+            allData = rows;
+            x.domain(d3.extent(allData, d => d.gdpPercap)).nice();
+            y.domain(d3.extent(allData, d => d.lifeExp)).nice();
+            r.domain(d3.extent(allData, d => d.pop));
+            xAxisG.call(d3.axisBottom(x).ticks(6, "~s"));
+            yAxisG.call(d3.axisLeft(y));
+            render();
+        });
+
+        // first render is instant; subsequent ones share one transition timeline
+        let firstRender = true;
+
+        function render() {
+            const yearData = allData.filter(d => d.year === currentYear);
+            const visible  = activeContinent
+                ? yearData.filter(d => d.continent === activeContinent)
+                : yearData;
+
+            // one transition for the whole frame so cx/cy/r animate together
+            const t = firstRender
+                ? null
+                : c.plot.transition().duration(450).ease(d3.easeCubicInOut);
+            firstRender = false;
+
+            const merged = c.plot.selectAll("circle.country")
+                .data(visible, d => d.country)
+                .join(
+                    enter => enter.append("circle")
+                        .attr("class", "country")
+                        .attr("cx",   d => x(d.gdpPercap))
+                        .attr("cy",   d => y(d.lifeExp))
+                        .attr("r",    d => r(d.pop))
+                        .attr("fill", d => colorOf(d.continent))
+                        .style("cursor", "pointer")
+                        .on("mouseover", function (event, d) {
+                            // skip the dark hover stroke if this circle is the selected one
+                            if (d.country !== selectedCountry) {
+                                d3.select(this)
+                                    .attr("stroke", "#1a1a1a")
+                                    .attr("stroke-width", 2);
+                            }
+                            tip.style("opacity", 1)
+                                .html(
+                                    `<b>${d.country}</b><br>` +
+                                    `${d.continent} · ${d.year}<br>` +
+                                    `life exp: ${d.lifeExp.toFixed(1)} yr<br>` +
+                                    `pop: ${d3.format(",")(d.pop)}<br>` +
+                                    `GDP pc: ${d3.format("$,.0f")(d.gdpPercap)}`);
+                        })
+                        .on("mousemove", event => {
+                            tip.style("left", (event.pageX + 14) + "px")
+                               .style("top",  (event.pageY + 14) + "px");
+                        })
+                        .on("mouseout", function (event, d) {
+                            // restore the selection-aware stroke (white normally, black if selected)
+                            d3.select(this)
+                                .attr("stroke",       d.country === selectedCountry ? "#1a1a1a" : "white")
+                                .attr("stroke-width", d.country === selectedCountry ? 3 : 1);
+                            tip.style("opacity", 0);
+                        })
+                        .on("click", (event, d) => {
+                            event.stopPropagation();
+                            selectedCountry = (selectedCountry === d.country) ? null : d.country;
+                            render();
+                        }),
+                    update => update,
+                    exit => exit.remove()
+                );
+
+            // selection-driven attributes — re-applied every render
+            merged
+                .attr("stroke",       d => d.country === selectedCountry ? "#1a1a1a" : "white")
+                .attr("stroke-width", d => d.country === selectedCountry ? 3 : 1)
+                .attr("opacity",      d => selectedCountry && d.country !== selectedCountry ? 0.15 : 0.7);
+
+            // animate position/size on the shared timeline
+            (t ? merged.transition(t) : merged)
+                .attr("cx", d => x(d.gdpPercap))
+                .attr("cy", d => y(d.lifeExp))
+                .attr("r",  d => r(d.pop));
+        }
+
+        // background click on the SVG (anywhere that is not a country circle)
+        // clears the selection
+        c.root.on("click", function (event) {
+            if (event.target.tagName !== "circle" || !event.target.classList.contains("country")) {
+                if (selectedCountry !== null) {
+                    selectedCountry = null;
+                    render();
+                }
+            }
+        });
+
+        // year slider — scrub the timeline; render() picks up the new year from state
+        d3.select("#year").on("input", function () {
+            currentYear = +this.value;
+            yearDisplay.textContent = currentYear;
+            render();
+        });
+    </script>
+</body>
+</html>

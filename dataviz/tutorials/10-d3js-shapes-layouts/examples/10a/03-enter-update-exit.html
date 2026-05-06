@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>10a — enter / update / exit (concept diagram)</title>
+    <style>
+        body { max-width: 1100px; margin: 2em auto; padding: 0 1.5em;
+            line-height: 1.55; color: #222; font-size: 16px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        h1 { font-size: 1.4em; margin-bottom: 0.3em; }
+        .lead { color: #555; margin-top: 0; }
+        .lead a { color: #0072B2; }
+        svg { width: 100%; height: auto; max-width: 100%; display: block;
+            border: 1px solid #ddd; background: #fafafa; }
+        button { padding: 0.4em 0.9em; font-size: 1em; cursor: pointer; }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="../_shared/utils.js"></script>
+</head>
+<body>
+    <h1>10a — Enter / update / exit (concept diagram)</h1>
+    <p class="lead">A diagram of what <code>.join</code> partitions the data into when you re-bind
+        a different array. Set A is {1..9}; set B is {3..11}. Toggle the direction to see which IDs
+        fall into each sub-selection: <span style="color:#009E73"><strong>enter</strong></span> are
+        new, <span style="color:#0072B2"><strong>update</strong></span> are in both,
+        <span style="color:#D55E00"><strong>exit</strong></span> are gone.
+        <a href="../../10a-update-pattern.html">Source tutorial &rarr;</a></p>
+
+    <p>
+        <button id="cycle">Toggle direction</button>
+        <span id="cycle-state" style="margin-left: 1em; color: #555;">currently showing the join going A → B</span>
+    </p>
+    <div id="eue-panels"></div>
+
+    <script>
+        // ─────────────────────────────────────────────────────────────────────
+        // layout constants — used for both the static scaffold and the dynamic IDs
+        const idRange  = d3.range(1, 12);
+        const idsA     = new Set(d3.range(1, 10));
+        const idsB     = new Set(d3.range(3, 12));
+        const slotW    = 48;     // pixels between two id slots
+        const rowH     = 70;     // pixels between two role rows
+        const dotR     = 14;     // radius of the role-coloured dots
+        const labelW   = 70;     // left margin reserved for the role label
+
+        const slotXL = id => labelW + slotW * (id - 0.5);
+        const rowYM  = i  => rowH * (i + 0.5);
+
+        // canvas dimensioned to fit exactly 11 slots × 3 rows + a thin top label strip
+        const W = labelW + slotW * idRange.length + 24;
+        const H = rowH * 3 + 28 + 16;
+        const c = makeCanvas("#eue-panels", H, {
+            width: W,
+            margin: { top: 28, right: 24, bottom: 16, left: 0 }
+        });
+
+        // ── static scaffold: one row per role with a faint baseline + 11 grey ticks ──
+        const roleColor = {
+            enter:  "#009E73",
+            update: "#0072B2",
+            exit:   "#D55E00"
+        };
+        ["enter", "update", "exit"].forEach((role, i) => {
+            const yMid = rowYM(i);
+
+            // role label, left of the row
+            c.plot.append("text")
+                .attr("x", labelW - 14)
+                .attr("y", yMid + 5)
+                .attr("text-anchor", "end")
+                .attr("font-size", 13)
+                .attr("font-weight", "bold")
+                .attr("fill", roleColor[role])
+                .text(role);
+
+            // baseline running across the row
+            c.plot.append("line")
+                .attr("x1", slotXL(1) - dotR)
+                .attr("x2", slotXL(11) + dotR)
+                .attr("y1", yMid)
+                .attr("y2", yMid)
+                .attr("stroke", "#e1e4e8")
+                .attr("stroke-width", 1);
+
+            // small grey ticks at every slot — show where IDs would sit
+            idRange.forEach(id => {
+                c.plot.append("circle")
+                    .attr("cx", slotXL(id))
+                    .attr("cy", yMid)
+                    .attr("r", 3)
+                    .attr("fill", "#d0d4d9");
+            });
+        });
+
+        // column headers (1..11) along the top
+        idRange.forEach(id => {
+            c.plot.append("text")
+                .attr("x", slotXL(id))
+                .attr("y", -8)
+                .attr("text-anchor", "middle")
+                .attr("font-size", 11)
+                .attr("fill", "#888")
+                .text(id);
+        });
+
+        // partition IDs into enter/update/exit given a direction (A→B or B→A)
+        function rolesForDirection(dir) {
+            const prev = dir === "AtoB" ? idsA : idsB;
+            const next = dir === "AtoB" ? idsB : idsA;
+            const result = { enter: [], update: [], exit: [] };
+            idRange.forEach(id => {
+                const inPrev = prev.has(id);
+                const inNext = next.has(id);
+                if      ( inNext && !inPrev) result.enter.push(id);
+                else if ( inNext &&  inPrev) result.update.push(id);
+                else if (!inNext &&  inPrev) result.exit.push(id);
+            });
+            return result;
+        }
+
+        let dir = "AtoB";
+
+        function renderEUE() {
+            const roles = rolesForDirection(dir);
+
+            // for each role row, draw the active IDs as coloured dots with white labels
+            ["enter", "update", "exit"].forEach((role, i) => {
+                const yMid = rowYM(i);
+
+                c.plot.selectAll(`circle.eue-${role}`)
+                    .data(roles[role], id => id)
+                    .join("circle")
+                        .attr("class",   `eue-${role}`)
+                        .attr("cx",      id => slotXL(id))
+                        .attr("cy",      yMid)
+                        .attr("r",       dotR)
+                        .attr("fill",    roleColor[role])
+                        .attr("opacity", 0.85);
+
+                c.plot.selectAll(`text.eue-${role}`)
+                    .data(roles[role], id => id)
+                    .join("text")
+                        .attr("class",       `eue-${role}`)
+                        .attr("x",           id => slotXL(id))
+                        .attr("y",           yMid + 4)
+                        .attr("text-anchor", "middle")
+                        .attr("fill",        "white")
+                        .attr("font-size",   12)
+                        .attr("font-weight", "bold")
+                        .text(id => id);
+            });
+
+            document.getElementById("cycle-state").textContent =
+                `currently showing the join going ${dir === "AtoB" ? "A → B" : "B → A"}`;
+        }
+        renderEUE();
+
+        document.getElementById("cycle").addEventListener("click", () => {
+            dir = dir === "AtoB" ? "BtoA" : "AtoB";
+            renderEUE();
+        });
+    </script>
+</body>
+</html>

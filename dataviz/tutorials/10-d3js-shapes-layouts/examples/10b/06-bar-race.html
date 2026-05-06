@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>10b §7 — bar chart race</title>
+    <style>
+        body { max-width: 1100px; margin: 2em auto; padding: 0 1.5em;
+            line-height: 1.55; color: #222; font-size: 16px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        h1 { font-size: 1.4em; margin-bottom: 0.3em; }
+        .lead { color: #555; margin-top: 0; }
+        .lead a { color: #0072B2; }
+        svg { width: 100%; height: auto; max-width: 100%; display: block;
+            border: 1px solid #ddd; background: #fafafa; }
+        button { padding: 0.4em 0.9em; font-size: 1em; cursor: pointer; }
+        .axis text { font-size: 13px; fill: #555; }
+        .axis path, .axis line { stroke: #bbb; }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="../_shared/utils.js"></script>
+</head>
+<body>
+    <h1>10b §7 — Bar chart race</h1>
+    <p class="lead">A key-joined bar chart with a per-frame <code>scaleBand.domain()</code> that
+        reorders the bars, and one shared 800 ms transition that animates bars, value labels, and
+        axes against the same timeline. Top-10 cities by synthetic population, 1990 → 2020.
+        <a href="../../10b-transitions.html">Source tutorial &rarr;</a></p>
+
+    <p>
+        <button id="play">▶ play</button>
+        <button id="step">step</button>
+        <button id="reset">reset</button>
+        <span style="margin-left: 1em; color: #555;">year:
+            <span id="year" style="font-weight: bold;">1990</span></span>
+    </p>
+    <div id="demo"></div>
+
+    <script>
+        // ─────────────────────────────────────────────────────────────────────
+        // synthetic city populations (millions) per year — monotonically growing with noise
+        const cities = ["Tokyo","Delhi","Shanghai","Mumbai","São Paulo",
+                        "Mexico City","Cairo","Beijing","Dhaka","Osaka"];
+        const years  = d3.range(1990, 2021);
+        const cityRng = d3.randomLcg(11);
+        const baseGrowth = cities.map(() => 0.5 + cityRng() * 1.8);
+        const startVal   = cities.map(() => 6 + cityRng() * 12);
+        const data = [];
+        cities.forEach((id, ci) => {
+            let v = startVal[ci];
+            years.forEach(y => {
+                v += baseGrowth[ci] * (0.7 + cityRng() * 0.6);
+                data.push({ id, year: y, value: +v.toFixed(2) });
+            });
+        });
+
+        const c = makeCanvas("#demo", 380, {
+            margin: { top: 20, right: 100, bottom: 30, left: 110 }
+        });
+
+        // scales (x-domain is recomputed each frame; y-domain re-ranks each frame)
+        const x = d3.scaleLinear().range([0, c.innerW]);
+        const y = d3.scaleBand().range([0, c.innerH]).padding(0.16);
+        const colour = d3.scaleOrdinal()
+            .domain(cities)
+            .range(d3.schemeTableau10);
+
+        // axis groups + a big year label that lives behind the bars
+        const xAxisG = c.plot.append("g")
+            .attr("class", "axis")
+            .attr("transform", `translate(0, ${c.innerH})`);
+        const yAxisG = c.plot.append("g")
+            .attr("class", "axis");
+        const yearLabel = c.plot.append("text")
+            .attr("x", c.innerW - 4)
+            .attr("y", c.innerH - 10)
+            .attr("text-anchor", "end")
+            .style("font-size", "32px")
+            .style("font-weight", "bold")
+            .style("fill", "#bbb");
+
+        let i = 0, timer = null;
+
+        function step(year) {
+            // update the year display + the big behind-bars label
+            d3.select("#year").text(year);
+            yearLabel.text(year);
+
+            // sort this year's rows by descending value, then re-rank the band scale
+            const sorted = data
+                .filter(d => d.year === year)
+                .sort((a, b) => d3.descending(a.value, b.value));
+            x.domain([0, d3.max(sorted, d => d.value)]).nice();
+            y.domain(sorted.map(d => d.id));
+
+            // ONE shared transition for bars, labels, and axes — same start, same easing
+            const t = c.plot.transition().duration(800).ease(d3.easeLinear);
+
+            // bars — keyed by city id; new bars enter at width=0, then transition to width
+            c.plot.selectAll("rect.bar")
+                .data(sorted, d => d.id)
+                .join(
+                    enter => enter.append("rect")
+                        .attr("class",  "bar")
+                        .attr("x",      0)
+                        .attr("y",      d => y(d.id))
+                        .attr("height", y.bandwidth())
+                        .attr("fill",   d => colour(d.id))
+                        .attr("width",  0),
+                    update => update,
+                    exit   => exit.remove()
+                )
+                .transition(t)
+                    .attr("y",      d => y(d.id))
+                    .attr("height", y.bandwidth())
+                    .attr("width",  d => x(d.value));
+
+            // value labels next to each bar
+            c.plot.selectAll("text.val")
+                .data(sorted, d => d.id)
+                .join(
+                    enter => enter.append("text")
+                        .attr("class",       "val")
+                        .attr("text-anchor", "start")
+                        .attr("dy",          4)
+                        .style("font-size",  "13px")
+                        .style("fill",       "#444")
+                        .attr("x",           d => x(d.value) + 5)
+                        .attr("y",           d => y(d.id) + y.bandwidth() / 2),
+                    update => update,
+                    exit   => exit.remove()
+                )
+                .text(d => d3.format(".1f")(d.value))
+                .transition(t)
+                    .attr("x", d => x(d.value) + 5)
+                    .attr("y", d => y(d.id) + y.bandwidth() / 2);
+
+            xAxisG.transition(t).call(d3.axisBottom(x).ticks(5));
+            yAxisG.transition(t).call(d3.axisLeft(y).tickSizeOuter(0));
+        }
+        step(years[0]);
+
+        function play() {
+            if (timer) return;
+            d3.select("#play").text("⏸ pause");
+            timer = d3.interval(() => {
+                i = (i + 1) % years.length;
+                step(years[i]);
+            }, 1000);
+        }
+        function pause() {
+            if (!timer) return;
+            timer.stop();
+            timer = null;
+            d3.select("#play").text("▶ play");
+        }
+
+        document.getElementById("play").addEventListener("click", () => timer ? pause() : play());
+        document.getElementById("step").addEventListener("click", () => {
+            pause();
+            i = (i + 1) % years.length;
+            step(years[i]);
+        });
+        document.getElementById("reset").addEventListener("click", () => {
+            pause();
+            i = 0;
+            step(years[0]);
+        });
+    </script>
+</body>
+</html>

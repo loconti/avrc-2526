@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>10b §3 — chained transitions</title>
+    <style>
+        body { max-width: 1100px; margin: 2em auto; padding: 0 1.5em;
+            line-height: 1.55; color: #222; font-size: 16px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        h1 { font-size: 1.4em; margin-bottom: 0.3em; }
+        .lead { color: #555; margin-top: 0; }
+        svg { width: 100%; height: auto; max-width: 100%; display: block;
+            border: 1px solid #ddd; background: #fafafa; }
+        button { padding: 0.4em 0.9em; font-size: 1em; cursor: pointer; }
+        a { color: #0072B2; }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="../_shared/utils.js"></script>
+</head>
+<body>
+    <h1>10b §3 — Chained transitions</h1>
+    <p class="lead">A transition can be followed by another transition; the second one starts when
+        the first finishes. Three phases here: move right, then move up, then change colour.
+        <a href="../../10b-transitions.html">Source tutorial &rarr;</a></p>
+
+    <p><button id="go">Run the chain</button></p>
+    <div id="demo"></div>
+    <script>
+        // ─────────────────────────────────────────────────────────────────────
+        const c = makeCanvas("#demo", 200, { margin: { top: 20, right: 30, bottom: 20, left: 30 } });
+        const dot = c.plot.append("circle")
+            .attr("cx", 40).attr("cy", c.innerH - 30).attr("r", 18)
+            .attr("fill", "#0072B2");
+        document.getElementById("go").addEventListener("click", () => {
+            dot.interrupt()
+                .attr("cx", 40).attr("cy", c.innerH - 30).attr("fill", "#0072B2");
+            dot.transition().duration(600)
+                .attr("cx", c.innerW - 40)
+                .transition().duration(600)
+                .attr("cy", 30)
+                .transition().duration(400)
+                .attr("fill", "tomato");
+        });
+    </script>
+</body>
+</html>

@@ -3,108 +3,160 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>DV10 — D3 Shapes, Layouts, and Interaction</title>
+    <title>DV10 — Advanced D3</title>
     <link rel="stylesheet" href="./_shared/chart.css">
 </head>
 
 <body>
-    <h1>DV10 — D3 Shapes, Layouts, and Interaction</h1>
+    <h1>DV10 — Advanced D3</h1>
+    <p class="lead">L9 finished with a complete static scatterplot (09e). DV10 turns that static
+        foundation into a living chart by adding the five things a static chart can't do:
+        <strong>change</strong>, <strong>time</strong>, <strong>input</strong>,
+        <strong>composition</strong>, <strong>navigation</strong> — one tutorial each.</p>
 
     <h2>What you should already know</h2>
-    <p>The L10 tutorials build directly on the L9 sequence. Before starting here, you should be comfortable
-        with:</p>
     <ul>
-        <li>SVG basics — <code>&lt;rect&gt;</code>, <code>&lt;circle&gt;</code>, <code>&lt;text&gt;</code>,
-            attributes, the coordinate system (<code>09a</code>)</li>
-        <li>The data join — <code>selectAll</code> · <code>data</code> · <code>join</code> (<code>09b</code>)</li>
-        <li>Scales and axes — <code>scaleLinear</code>, <code>scaleLog</code>, <code>scaleBand</code>,
-            margin convention (<code>09c</code>)</li>
-        <li>Loading CSVs and helpers — <code>d3.csv</code>, <code>d3.extent</code>, <code>d3.rollup</code>
-            (<code>09d</code>)</li>
+        <li>SVG primitives and the path mini-language (<code>09a</code>)</li>
+        <li>The static data join — <code>selectAll</code> · <code>data</code> ·
+            <code>join("tag")</code> (<code>09b</code>)</li>
+        <li>Scales, axes, and shape generators — <code>scaleLinear</code>, <code>scaleBand</code>,
+            <code>scaleLog</code>, <code>scaleSqrt</code>, <code>d3.line</code>, <code>d3.area</code>
+            (<code>09c</code>)</li>
+        <li>Loading CSVs and helpers (<code>09d</code>)</li>
+        <li>The first complete chart — Gapminder scatterplot (<code>09e</code>)</li>
     </ul>
+
+    <h2>The five moves</h2>
+    <ol>
+        <li><strong>Change</strong> — what happens when the data updates (10a)</li>
+        <li><strong>Time</strong> — animate the change (10b)</li>
+        <li><strong>Input</strong> — let the reader trigger the change (10c)</li>
+        <li><strong>Composition</strong> — layouts that turn data into geometry (10d)</li>
+        <li><strong>Navigation</strong> — zoom and pan when the data is denser than the screen (10e)</li>
+    </ol>
 
     <h2>Tutorials</h2>
     <p>Run them in order — each one builds on the previous.</p>
     <ol>
-        <li><a href="10a-svg-paths-and-line.html"><strong>10a — SVG Paths and the Line / Area
-                    Generators</strong></a><br>
-            The SVG path mini-language (<code>M</code>, <code>L</code>, <code>Q</code>, <code>C</code>,
-            <code>Z</code>); reading a path string step by step; <code>d3.line()</code> path generator;
-            <code>.datum()</code> vs <code>.data()</code>; curves (<code>curveLinear</code> ·
-            <code>curveStep</code> · <code>curveMonotoneX</code> · …); <code>d3.area()</code>; line + area
-            combined.
+        <li><a href="10a-update-pattern.html"><strong>10a — Update Pattern and
+                <code>selection.join</code></strong></a><br>
+            What 09b's static <code>.join</code> does on the second call. The older explicit form
+            (<code>.exit()</code> · <code>.enter()</code> · <code>.merge()</code>); modern
+            <code>.join</code> with three callbacks; key functions vs index joins (interactive
+            shuffle); sortable bar chart of countries by population.
         </li>
-        <li><a href="10b-bar-charts-and-stack.html"><strong>10b — Bar Charts and d3.stack</strong></a><br>
-            Building a bar chart step by step (top vs bottom of bar, the <code>height = innerH - y(value)</code>
-            formula); <code>scaleBand</code> with padding; why stacked bars need transformed data;
-            <code>d3.stack()</code> output structure; nested SVG (<code>g</code> per layer, <code>rect</code>
-            per segment); D3 layouts as a family.
+        <li><a href="10b-transitions.html"><strong>10b — Transitions</strong></a><br>
+            <code>selection.transition()</code> basics; transitions after a join; chaining;
+            tuning with <code>duration</code>, <code>delay</code>, <code>ease</code>; staggered
+            transitions via per-datum delay; transitions on enter / exit; bar chart race.
         </li>
-        <li><a href="10c-update-pattern.html"><strong>10c — Update Pattern and selection.join</strong></a><br>
-            Why updates matter; recap of enter/update/exit; the older explicit GUP form (<code>.exit()</code>
-            · <code>.enter()</code> · <code>.merge()</code>); <code>selection.join()</code> as the modern
-            shortcut; key functions vs index joins (interactive demo); custom join with three callbacks.
+        <li><a href="10c-interactions-capstone.html"><strong>10c — Interactions</strong></a><br>
+            <code>selection.on</code> for browser events; the event → state → render loop pattern;
+            hover tooltips; click-to-toggle filters; year-slider scrubbing; full Gapminder
+            interactive scatterplot; <code>d3.brush</code> for range filtering.
         </li>
-        <li><a href="10d-transitions.html"><strong>10d — Transitions</strong></a><br>
-            <code>selection.transition()</code> basics; transitions after a join; chaining transitions;
-            tuning with <code>duration</code>, <code>delay</code>, <code>ease</code>; easing function
-            comparison (<code>easeLinear</code> · <code>easeCubicInOut</code> · <code>easeBackOut</code> ·
-            <code>easeBounceOut</code> · <code>easeElasticOut</code>); staggered transitions via per-datum
-            delay; transitions on enter/exit.
+        <li><a href="10d-examples-gallery.html"><strong>10d — Layouts</strong></a><br>
+            Bar chart (the simplest layout-driven chart); <code>scaleBand</code> padding knobs;
+            <code>d3.stack</code> layout (input → output → nested join); streamgraph (same stack with
+            <code>stackOffsetWiggle</code>); a <em>which layout for which question?</em> decision
+            table covering <code>stack</code> · <code>pie</code> · <code>hierarchy</code> ·
+            <code>force</code> · <code>chord</code> · <code>sankey</code>.
         </li>
-        <li><a href="10e-interactions-capstone.html"><strong>10e — Interactions Capstone</strong></a><br>
-            <code>selection.on</code> for browser events; the event → state → render loop pattern; hover
-            tooltips; click-to-toggle filters; year-slider scrubbing; full Gapminder interactive scatterplot
-            combining everything from L9 + L10.
+        <li><a href="10e-zoom-and-navigation.html"><strong>10e — Zoom and Pan</strong></a><br>
+            <code>d3.zoom</code> in four visible stages: static scatterplot → naive group transform
+            → <code>transform.rescaleX</code> / <code>rescaleY</code> on the scales → clip-path to
+            the plot rectangle. When to use the rescale-scales pattern vs the group-transform
+            pattern. Production checklist: responsive <code>viewBox</code>, accessible palettes,
+            ARIA, when to switch to <code>&lt;canvas&gt;</code>.
         </li>
     </ol>
 
     <h2>Setup</h2>
     <p>The tutorials are plain HTML files and self-contained — every asset they need
-        (<code>_shared/chart.css</code>, <code>_shared/chart.js</code>, <code>datasets/gapminder.csv</code>)
-        is inside this folder. Serve them with a local HTTP server:</p>
+        (<code>_shared/chart.css</code>, <code>_shared/chart.js</code>,
+        <code>datasets/gapminder.csv</code>) is inside this folder. Serve them with a local HTTP
+        server:</p>
     <pre><code>cd 10-d3js-shapes-layouts
 python -m http.server 8000
 # open http://localhost:8000/</code></pre>
-    <p>D3 is loaded from the CDN (<code>https://d3js.org/d3.v7.min.js</code>); no installation required.</p>
+    <p>D3 is loaded from the CDN (<code>https://d3js.org/d3.v7.min.js</code>); no installation
+        required.</p>
 
-    <h2>Coverage check (DV10 deck → tutorials)</h2>
+    <h2>Per-demo files</h2>
+    <p>The <code>examples/</code> subfolder contains one self-contained HTML file per demo —
+        each one ships its own copy of <code>makeCanvas</code> and styling, so it can be opened
+        on its own (or copied into another project) without the rest of the tutorial folder.
+        Useful for grabbing one pattern in isolation.</p>
     <table>
-        <thead><tr><th>Concept</th><th>Practiced in</th></tr></thead>
+        <thead><tr><th>Tutorial</th><th>Examples</th></tr></thead>
         <tbody>
-            <tr><td>SVG path mini-language (<code>M</code>, <code>L</code>, <code>Q</code>, <code>C</code>,
-                <code>Z</code>)</td><td>10a</td></tr>
-            <tr><td><code>d3.line</code>, <code>d3.area</code> path generators</td><td>10a</td></tr>
-            <tr><td><code>.datum()</code> vs <code>.data()</code></td><td>10a</td></tr>
-            <tr><td>Curve types (linear / step / monotone / catmull / basis)</td><td>10a</td></tr>
-            <tr><td>Bar chart with <code>scaleBand</code> and the inverted y-plane</td><td>10b</td></tr>
-            <tr><td><code>d3.stack</code> layout and nested SVG structure</td><td>10b</td></tr>
-            <tr><td>General Update Pattern (explicit form)</td><td>10c</td></tr>
-            <tr><td><code>selection.join</code> shortcut</td><td>10c</td></tr>
-            <tr><td>Key functions vs index joins</td><td>10c</td></tr>
-            <tr><td>Custom join with three callbacks</td><td>10c</td></tr>
-            <tr><td>Transitions: <code>duration</code>, <code>delay</code>, <code>ease</code></td><td>10d</td></tr>
-            <tr><td>Chained transitions</td><td>10d</td></tr>
-            <tr><td>Staggered transitions (per-datum delay)</td><td>10d</td></tr>
-            <tr><td>Event listeners via <code>selection.on</code></td><td>10e</td></tr>
-            <tr><td>Event-state-render loop pattern</td><td>10e</td></tr>
-            <tr><td>Hover tooltip · click-to-filter · year slider</td><td>10e</td></tr>
+            <tr>
+                <td><a href="10a-update-pattern.html">10a — Update pattern</a></td>
+                <td>
+                    <a href="examples/10a/01-key-vs-index-join.html">key vs index join</a> ·
+                    <a href="examples/10a/02-custom-join.html">custom join callbacks</a> ·
+                    <a href="examples/10a/03-enter-update-exit.html">enter/update/exit (concept)</a> ·
+                    <a href="examples/10a/04-reactive-reshuffle.html">reactive reshuffle</a> ·
+                    <a href="examples/10a/05-sortable-bar.html">sortable bar chart</a>
+                </td>
+            </tr>
+            <tr>
+                <td><a href="10b-transitions.html">10b — Transitions</a></td>
+                <td>
+                    <a href="examples/10b/01-basic-move.html">basic transition</a> ·
+                    <a href="examples/10b/02-chained.html">chained transitions</a> ·
+                    <a href="examples/10b/03-easing.html">easing comparison</a> ·
+                    <a href="examples/10b/04-staggered.html">staggered transition</a> ·
+                    <a href="examples/10b/05-enter-exit-transitions.html">enter/exit transitions</a> ·
+                    <a href="examples/10b/06-bar-race.html">bar chart race</a>
+                </td>
+            </tr>
+            <tr>
+                <td><a href="10c-interactions-capstone.html">10c — Interactions</a></td>
+                <td>
+                    <a href="examples/10c/01-interactive-gapminder.html">interactive Gapminder capstone</a> ·
+                    <a href="examples/10c/02-hover-tooltip.html">hover tooltip</a> ·
+                    <a href="examples/10c/03-click-toggle.html">click to toggle</a> ·
+                    <a href="examples/10c/04-year-slider.html">year slider</a> ·
+                    <a href="examples/10c/05-brush-filter.html">d3.brush range filter</a>
+                </td>
+            </tr>
+            <tr>
+                <td><a href="10d-examples-gallery.html">10d — Layouts</a></td>
+                <td>
+                    <a href="examples/10d/01-bar-chart.html">basic bar chart</a> ·
+                    <a href="examples/10d/02-band-padding.html">scaleBand padding</a> ·
+                    <a href="examples/10d/03-stacked-bar.html">stacked bar chart</a> ·
+                    <a href="examples/10d/04-streamgraph.html">streamgraph playground</a>
+                </td>
+            </tr>
         </tbody>
     </table>
 
-    <h2>Per-demo files for class</h2>
-    <p>The <code>examples/</code> subfolder contains one self-contained HTML file per demo — minimal markup,
-        no narrative text — for live in-class demonstrations. Each file inlines its helpers and can be
-        opened directly in a browser.</p>
+    <h2>Where this leads</h2>
+    <p>L11 takes the update pattern, transitions, drag, and zoom directly into force-directed
+        networks. L12 covers chord, sankey, edge bundling — different layouts, same
+        <em>data → geometry</em> contract from 10d. The L11 demos use <code>d3.zoom</code> exactly
+        as 10e showed it; L11's drag is <code>d3.drag</code> wired to the simulation's
+        <code>fx</code> / <code>fy</code> just like 10c §7 promised.</p>
 
     <h2>References</h2>
     <ul>
-        <li><a href="https://alignedleft.com/tutorials/d3" target="_blank">Murray — <em>Interactive Data
-                    Visualization for the Web</em></a> (chapters 7 — transitions, 8 — interaction)</li>
-        <li><a href="https://github.com/d3/d3-shape" target="_blank">d3-shape</a> — line, area, arc, pie,
-            curve types</li>
-        <li><a href="https://github.com/d3/d3-transition" target="_blank">d3-transition</a> — transition API</li>
-        <li><a href="https://github.com/d3/d3-ease" target="_blank">d3-ease</a> — easing function gallery</li>
+        <li><a href="https://d3js.org/d3-selection/joining" target="_blank">d3-selection ·
+            joining</a></li>
+        <li><a href="https://d3js.org/d3-transition" target="_blank">d3-transition</a> ·
+            <a href="https://d3js.org/d3-ease" target="_blank">d3-ease</a> ·
+            <a href="https://d3js.org/d3-timer" target="_blank">d3-timer</a></li>
+        <li><a href="https://d3js.org/d3-shape/stack" target="_blank">d3-shape · stack</a> ·
+            <a href="https://d3js.org/d3-shape/pie" target="_blank">pie</a> ·
+            <a href="https://d3js.org/d3-shape/curve" target="_blank">curve</a></li>
+        <li><a href="https://d3js.org/d3-zoom" target="_blank">d3-zoom</a> ·
+            <a href="https://d3js.org/d3-brush" target="_blank">d3-brush</a> ·
+            <a href="https://d3js.org/d3-drag" target="_blank">d3-drag</a></li>
+        <li><a href="https://observablehq.com/@d3/gallery" target="_blank">D3 Observable gallery</a> —
+            sortable bar, streamgraph, bar race, zoomable scatterplot, brush + zoom.</li>
+        <li><a href="https://www.a11yproject.com/posts/accessible-svg/" target="_blank">A11Y Project —
+            Accessible SVG</a></li>
     </ul>
 </body>
 
