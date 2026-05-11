@@ -34,7 +34,7 @@ Course materials for **Network Science** at the University of Turin (UNITO).
 | 16 | Games on Networks and Strategic Interaction | [ns16-games-on-networks.pdf](netsci/slides/ns16-games-on-networks.pdf) | |
 | 17 | Traffic Networks and Selfish Routing | [ns17-traffic-networks.pdf](netsci/slides/ns17-traffic-networks.pdf) | |
 | 18 | Cascading Behaviors in Networks | [ns18-cascades.pdf](netsci/slides/ns18-cascades.pdf) | |
-| 20 | Traditional Machine Learning on Graphs | [ns19-20-ml-graph.pdf](netsci/slides/ns19-20-ml-graph.pdf) | |
+| 19–20 | Traditional Machine Learning on Graphs | [ns19-20-ml-graph.pdf](netsci/slides/ns19-20-ml-graph.pdf) | |
 | 21 | Representation Learning on Graphs | [ns21-embeddings.pdf](netsci/slides/ns21-embeddings.pdf) | [21-from-features-to-embeddings.ipynb](netsci/tutorials/src/21-from-features-to-embeddings.ipynb) |
 
 ---
