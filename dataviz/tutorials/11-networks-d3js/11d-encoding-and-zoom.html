@@ -48,6 +48,7 @@ node.attr("r", d =&gt; r(d.bc));</code></pre>
     </ul>
     <p>The encoded view: hue = community, area = centrality, hover for label and attributes:</p>
     <div class="container" id="demo-encoded"></div>
+    <p class="example-link"><a href="examples/11d/01-encoded-view.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <h2>3. Cluster forces — make communities emerge from the layout</h2>
     <p>Colour-by-community shows you the grouping after the fact: the layout doesn't know what
@@ -121,6 +122,7 @@ sim.on("tick", () =&gt; { drawHulls(); /* …plus the usual node/link updates */
         visual element. Toggle the hulls on and off to see the effect:</p>
     <p><label><input type="checkbox" id="hull-toggle" checked> show community hulls</label></p>
     <div class="container" id="demo-hulls"></div>
+    <p class="example-link"><a href="examples/11d/02-community-hulls.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <div class="note"><strong>Takeaway.</strong> Categorical attribute → <code>scaleOrdinal</code> →
         colour. Quantitative attribute → <code>scaleSqrt</code> → radius. Group structure has

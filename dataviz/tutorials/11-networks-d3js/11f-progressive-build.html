@@ -45,6 +45,7 @@
 const link = svg.append("g").selectAll("line").data(links).join("line");
 const node = svg.append("g").selectAll("circle").data(nodes).join("circle").attr("r", 4);</code></pre>
     <div class="container" id="demo-empty"></div>
+    <p class="example-link"><a href="examples/11f/01-empty-force.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <h2>Stage 2 — encoded base</h2>
     <div class="stage-meta">
@@ -59,6 +60,7 @@ const colour  = d3.scaleOrdinal(d3.schemeTableau10);
 node.attr("r", d =&gt; r(d.bc)).attr("fill", d =&gt; colour(d.community));
 link.attr("stroke-width", d =&gt; linkW(d.weight));</code></pre>
     <div class="container" id="demo-encoded"></div>
+    <p class="example-link"><a href="examples/11f/02-encoded-base.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <h2>Stage 3 — drag and hover</h2>
     <div class="stage-meta">
@@ -78,6 +80,7 @@ node.on("mouseenter", (e, d) =&gt; {
     link.attr("opacity", l =&gt; focus.has(l.source.id) &amp;&amp; focus.has(l.target.id) ? 0.9 : 0.05);
 });</code></pre>
     <div class="container" id="demo-drag-hover"></div>
+    <p class="example-link"><a href="examples/11f/03-drag-and-hover.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <h2>Stage 4 — zoom-aware labels</h2>
     <div class="stage-meta">
@@ -99,6 +102,7 @@ d3.zoom().scaleExtent([0.3, 8])
              .style("font-size", `${12 * inv}px`);
     });</code></pre>
     <div class="container" id="demo-zoom-labels"></div>
+    <p class="example-link"><a href="examples/11f/04-zoom-aware-labels.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <h2>Stage 5 — styled label boxes</h2>
     <div class="stage-meta">
@@ -120,6 +124,7 @@ fo.append("xhtml:div")
     .style("text-align",  "center")
     .text(d =&gt; d.id.replace(/-/g, " "));</code></pre>
     <div class="container" id="demo-foreignobject"></div>
+    <p class="example-link"><a href="examples/11f/05-foreignobject-labels.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <p style="background: #f0f4ec; border-left: 4px solid #56904a; padding: 0.5em 0.9em;
               margin: 1em 0; font-size: 0.92em;">
@@ -154,6 +159,7 @@ sim.on("end", () =&gt; { /* stop the per-tick redraw */ });
 // label work only when visible
 if (anyLabelVisible) label.attr("x", d =&gt; d.x).attr("y", d =&gt; d.y);</code></pre>
     <div class="container" id="demo-perf"></div>
+    <p class="example-link"><a href="examples/11f/06-perf-and-scale.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <h2>Stage 7 — cluster forces (community-aware layout)</h2>
     <div class="stage-meta">
@@ -173,6 +179,7 @@ const tgt  = new Map(cks.map((c, i) =&gt; [c, { x: cx(i), y: cy(i) }]));
 sim.force("xCluster", d3.forceX(d =&gt; tgt.get(d.community).x).strength(0.08))
    .force("yCluster", d3.forceY(d =&gt; tgt.get(d.community).y).strength(0.08));</code></pre>
     <div class="container" id="demo-cluster"></div>
+    <p class="example-link"><a href="examples/11f/07-cluster-forces.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <div class="note"><strong>Takeaway.</strong> Each stage above is one specific technique on top of
         the previous one. <code>stage 1 → stage 2 → stage 3 → stage 4 → stage 5</code> covers the visible build of an

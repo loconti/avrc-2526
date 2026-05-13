@@ -51,6 +51,7 @@ node.call(drag(sim));</code></pre>
     </ul>
     <p>Drag any node below; release it and it relaxes back into the layout:</p>
     <div class="container" id="demo-drag"></div>
+    <p class="example-link"><a href="examples/11c/01-drag.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <h2>2. Hover to highlight neighbours</h2>
     <p>The information you usually want from a network view is "what is connected to <em>this</em>?". Hover
@@ -110,6 +111,7 @@ node.on("mouseleave", () =&gt; {
     <p>Hover the densely connected core below: rest of the network fades AND the focal node's
         neighbours show their names:</p>
     <div class="container" id="demo-hover"></div>
+    <p class="example-link"><a href="examples/11c/02-hover-neighbours.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <h2>3. Click to pin / unpin</h2>
     <p>Click a node and it stays where it is — even when the simulation reheats. Click it again and it
@@ -128,6 +130,7 @@ node.on("mouseleave", () =&gt; {
     <p>Combined with drag and hover, this is the full interaction vocabulary you'll see in nearly every
         D3.js network demo. The capstone in <code>11e</code> uses all three:</p>
     <div class="container" id="demo-click"></div>
+    <p class="example-link"><a href="examples/11c/03-click-pin.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <h2>4. Click-to-isolate with an animated transition</h2>
     <p>For a focused view, replace the click-to-pin with a richer interaction: clicking a node
@@ -237,6 +240,7 @@ c.root.on("click", event =&gt; {
     <p>Click any node to isolate it; click anywhere again to animate back to the full
         layout:</p>
     <div class="container" id="demo-isolate"></div>
+    <p class="example-link"><a href="examples/11c/04-click-isolate.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <div class="note"><strong>Takeaway.</strong> Three small handlers cover the bulk of network
         interaction: <strong>drag</strong> sets <code>fx</code>/<code>fy</code> while the pointer is down,

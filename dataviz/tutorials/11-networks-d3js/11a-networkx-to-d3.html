@@ -62,6 +62,7 @@ with open("got.json", "w") as f:
     <p>The summary appears below — both counts and a sample row from each array, so you can see what the
         bound data will look like before any drawing starts:</p>
     <div class="container" id="demo-summary"></div>
+    <p class="example-link"><a href="examples/11a/01-json-summary.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <h2>3. Drawing the network as raw SVG</h2>
     <p>A network visualization is just two layers of marks bound to two arrays. With a fixed position for
@@ -82,6 +83,7 @@ const node = svg.selectAll("circle").data(graph.nodes).join("circle")
         hand on a circle. Edges become <code>&lt;line&gt;</code>; nodes become <code>&lt;circle&gt;</code>. No
         layout algorithm is involved — the join just maps data to marks at the coordinates we computed.</p>
     <div class="container" id="demo-circle"></div>
+    <p class="example-link"><a href="examples/11a/02-fixed-circle.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <h2>4. Why a layout is needed</h2>
     <p>The circular arrangement is readable for 20 nodes because we picked the placement. With 187 nodes the
@@ -89,6 +91,7 @@ const node = svg.selectAll("circle").data(graph.nodes).join("circle")
         community structure that <em>is</em> in the data. The picture below drops every character on a random
         position — same join, same marks, no information.</p>
     <div class="container" id="demo-random"></div>
+    <p class="example-link"><a href="examples/11a/03-random-layout.html" target="_blank" rel="noopener">↗ example</a></p>
     <p>What we want is for nodes that share many edges to land near each other, and unrelated nodes to drift
         apart — automatically, from the structure of the graph itself. That's a <strong>layout</strong>: an
         algorithm that turns a graph into <code>(x, y)</code> per node. The next tutorial introduces the most

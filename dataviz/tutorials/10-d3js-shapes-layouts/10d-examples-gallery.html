@@ -146,6 +146,7 @@ plot.selectAll("text.value").data(barData).join("text")
     .attr("text-anchor", "middle")
     .text(d =&gt; d3.format(".1f")(d.mean));</code></pre>
     <div class="container" id="demo-bar"></div>
+    <p class="example-link"><a href="examples/10d/01-bar-chart.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <h2>3. The padding knobs on <code>scaleBand</code></h2>
     <p>You met <code>scaleBand</code> in 09c §7 — <code>x("category")</code> for the slot's left edge,
@@ -164,6 +165,7 @@ plot.selectAll("text.value").data(barData).join("text")
     <p>Below: same seven categories, three different inner paddings. Padding controls the gap between
         bars; pick a value that lets the bars dominate without crowding.</p>
     <div class="container" id="demo-band"></div>
+    <p class="example-link"><a href="examples/10d/02-band-padding.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <h2>4. Why stacked bars need transformed data</h2>
     <p>The plain bar chart had one number per x-category — easy: one
@@ -277,6 +279,7 @@ plot.append("g").attr("class", "axis").call(d3.axisLeft(y));
 // the same nested join from Step 2, with .attr("opacity", 0.9) added.</code></pre>
     <div class="legend" id="legend-stack"></div>
     <div class="container" id="demo-stack"></div>
+    <p class="example-link"><a href="examples/10d/03-stacked-bar.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <h2>7. Streamgraph — the same stack, drawn as flowing areas</h2>
     <p>The stacked bar chart in §6 used three ingredients: <code>d3.stack()</code> output, a
@@ -369,6 +372,7 @@ const area = d3.area()
     </p>
     <div class="legend" id="legend-stream"></div>
     <div class="container" id="demo-stream"></div>
+    <p class="example-link"><a href="examples/10d/04-streamgraph.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <h2>9. <code>d3.stack</code> is one example of a D3.js layout</h2>
     <p>Step back for a second. <code>d3.stack()</code> is a function that took flat input rows and

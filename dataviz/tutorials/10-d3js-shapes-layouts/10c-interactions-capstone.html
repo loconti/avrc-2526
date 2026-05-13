@@ -121,6 +121,7 @@ svg.selectAll("circle")
     <p>Below: the gapminder 2007 scatter with hover only — no filter, no slider yet. Hover a circle to
         see the country and its life expectancy:</p>
     <div class="container" id="demo-hover-only"></div>
+    <p class="example-link"><a href="examples/10c/02-hover-tooltip.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <h2>4. Click to toggle — state lives in a variable</h2>
     <p>The simplest interaction beyond hover is a <em>toggle</em>: click a mark, it lights up;
@@ -214,6 +215,7 @@ svg.selectAll("circle")
         layouts. Try it: click any country, click another to switch, click the same one again — or
         click the background — to clear:</p>
     <div class="container" id="demo-click-filter"></div>
+    <p class="example-link"><a href="examples/10c/03-click-toggle.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <h2>5. The year slider — scrubbing through time</h2>
     <p>Gapminder spans the years 1952–2007. A range slider lets the reader move along that
@@ -303,6 +305,7 @@ svg.selectAll("circle")
         <input type="range" id="year-slider" min="1952" max="2007" step="5" value="1952">
     </p>
     <div class="container" id="demo-slider-only"></div>
+    <p class="example-link"><a href="examples/10c/04-year-slider.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <h2>6. Capstone: Gapminder, interactive</h2>
     <p>Everything from this tutorial — events, state, render loop — combined into one chart:</p>
@@ -318,6 +321,7 @@ svg.selectAll("circle")
         <input type="range" id="year" min="1952" max="2007" step="5" value="1952">
     </p>
     <div class="container" id="chart"></div>
+    <p class="example-link"><a href="examples/10c/01-interactive-gapminder.html" target="_blank" rel="noopener">↗ example</a></p>
     <div id="tooltip"></div>
 
     <h2>7. Built-in interaction helpers</h2>
@@ -409,6 +413,7 @@ svg.selectAll("circle")
         to the right end to isolate the wealthy outliers.
     </p>
     <div class="container" id="chart-brush"></div>
+    <p class="example-link"><a href="examples/10c/05-brush-filter.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <p>Same shape as the click / slider handlers in §4-§5: an event fires, a piece of state (here
         the inverted GDP range <code>[x0, x1]</code>) is updated, marks are re-attributed.

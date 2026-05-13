@@ -50,6 +50,7 @@
         <button id="basic-go">Move the dot</button>
     </p>
     <div class="container" id="demo-basic"></div>
+    <p class="example-link"><a href="examples/10b/01-basic-move.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <h2>2. Transitions after a join</h2>
     <p>The most common place to attach a transition is right after a <code>.join</code>. The bound data has
@@ -78,6 +79,7 @@ svg.selectAll("circle")
         <button id="chain-go">Run the chain</button>
     </p>
     <div class="container" id="demo-chain"></div>
+    <p class="example-link"><a href="examples/10b/02-chained.html" target="_blank" rel="noopener">↗ example</a></p>
     <p>Useful for short, narrative steps where each phase has a clear meaning. Avoid long chains — viewers
         lose track of what changed when.</p>
 
@@ -102,6 +104,7 @@ svg.selectAll("circle")
         <button id="ease-go">Run all five</button>
     </p>
     <div class="container" id="demo-ease"></div>
+    <p class="example-link"><a href="examples/10b/03-easing.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <h2>5. Staggered transitions with <code>.delay</code></h2>
     <p>If <code>.delay</code> takes a function, each datum gets its own start time. Multiplying by the index
@@ -115,6 +118,7 @@ svg.selectAll("circle")
         <button id="stagger-go">Stagger the move</button>
     </p>
     <div class="container" id="demo-stagger"></div>
+    <p class="example-link"><a href="examples/10b/04-staggered.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <h2>6. Transitions on enter / exit</h2>
     <p>Combined with the custom-join form from <code>10a</code>, transitions become the language of
@@ -131,6 +135,7 @@ svg.selectAll("circle")
     <p>You already saw this idea in <code>10a §3</code> (the keys-vs-index demo, where shuffling
         the array reshuffled the marks). The composition is: <strong>data join → transition</strong>.
         That two-step phrase covers almost every animated chart in D3.js.</p>
+    <p class="example-link"><a href="examples/10b/05-enter-exit-transitions.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <h2>7. Bar race — transitions on a real chart</h2>
     <p>The Observable gallery's
@@ -186,6 +191,7 @@ d3.interval(() =&gt; step(years[i++ % years.length]), 1200);</code></pre>
             <span id="race-year" style="font-weight: bold;">1990</span></span>
     </p>
     <div class="container" id="demo-race"></div>
+    <p class="example-link"><a href="examples/10b/06-bar-race.html" target="_blank" rel="noopener">↗ example</a></p>
     <p>Same ingredients as the static sortable bar chart in <code>10a</code> — keyed join, axis
         re-binding, transition — combined with a <code>d3.interval</code> timer. That's a complete bar
         race in ~25 lines.</p>

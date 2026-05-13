@@ -100,6 +100,7 @@ plot.selectAll("circle").data(data).join("circle")
     .attr("r",  d =&gt; r(d.pop))
     .attr("fill", d =&gt; colour(d.continent));</code></pre>
     <div class="container" id="demo-zoom-step1"></div>
+    <p class="example-link"><a href="examples/10e/01-static-baseline.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <h2>3. Naïve zoom — transform a wrapping <code>&lt;g&gt;</code></h2>
     <p><strong>What changes from §2:</strong> we wrap the dots in a new <code>&lt;g&gt;</code> and
@@ -138,6 +139,7 @@ svg.call(zoom);</code></pre>
     <p>Try wheel-zooming the chart below, or click-and-drag to pan. The dots scale but the axis
         numbers stay put. Wrong:</p>
     <div class="container" id="demo-zoom-step2"></div>
+    <p class="example-link"><a href="examples/10e/02-naive-group-zoom.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <h2>4. Rescale the scales instead</h2>
     <p><strong>What changes from §3:</strong> we drop the wrapper group entirely. The dots go
@@ -179,6 +181,7 @@ svg.call(zoom);</code></pre>
         the edge and dots leak <em>outside</em> the plot rectangle, over the axis, into the
         margins:</p>
     <div class="container" id="demo-zoom-step3"></div>
+    <p class="example-link"><a href="examples/10e/03-rescale-scales.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <h2>5. Clip to the plot rectangle</h2>
     <p><strong>What changes from §4:</strong> the rescale-scales handler is unchanged. We add
@@ -209,6 +212,7 @@ const dotsG = plot.append("g").attr("clip-path", "url(#clip)");
     <p>Try every gesture from the §1 cheatsheet — dots stay inside the plot, axes stay aligned,
         no overflow:</p>
     <div class="container" id="demo-zoom"></div>
+    <p class="example-link"><a href="examples/10e/04-clipped-zoom.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <h2>6. Two patterns, two contexts</h2>
     <p>You have just seen both valid recipes — they are not redundant; they suit different chart

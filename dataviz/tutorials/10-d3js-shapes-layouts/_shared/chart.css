@@ -151,6 +151,23 @@ th {
     font-weight: 600;
 }
 
+.example-link {
+    margin-top: 0.3em;
+    font-size: 0.82em;
+    color: #999;
+}
+
+.example-link a {
+    color: #999;
+    text-decoration: none;
+    border-bottom: 1px dotted #ccc;
+}
+
+.example-link a:hover {
+    color: #0366d6;
+    border-bottom-color: #0366d6;
+}
+
 .tutorial-nav {
     margin-top: 2.5em;
     padding-top: 1em;

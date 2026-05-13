@@ -66,30 +66,19 @@ function ticked() {
         fades out (handled by <code>attachWarmup(svg, sim)</code>):</p>
     <p><button id="restart-basic">Restart simulation</button></p>
     <div class="container" id="demo-basic"></div>
+    <p class="example-link"><a href="examples/11b/01-basic-simulation.html" target="_blank" rel="noopener">↗ example</a></p>
 
-    <p><strong>The boundaryForce demo (one-time).</strong> The demo above is the only place
-        in L11 that wires <code>boundaryForce</code> into a simulation. It's the simplest way
-        to keep nodes from drifting off-canvas: a 5-line custom force that on every tick
-        clamps each node's (x, y) into the inner-canvas rectangle. The point of including it
-        once is twofold — it shows the
-        <a href="#sec-2">custom-force extension API</a> (any function with
-        <code>initialize(nodes)</code> qualifies as a D3.js force), and it's the most intuitive
-        "keep the graph in view" mechanism to read.</p>
-    <p><strong>Why every later L11 demo uses a different recipe.</strong>
-        <code>boundaryForce</code> hard-clips: nodes that would have drifted past the edge end
-        up squashed against it, which biases the layout near the boundary. The modern default
-        is a pair of gentle attractive forces toward the centre instead:
-        <code>forceX(cx).strength(0.1)</code> and <code>forceY(cy).strength(0.1)</code>.
-        Same intent, smoother result, and the layout still lives in canvas coordinates so
-        every downstream interaction (drag, hover, tooltips, zoom) keeps working naturally.</p>
-    <p><strong>A different alternative — fit-to-canvas.</strong> Instead of constraining
-        the simulation, let it run free and rescale the wrapping <code>&lt;g&gt;</code>
-        <em>after</em> the simulation cools, so the natural bounding box fills the canvas.
-        See <a href="examples/11b/01-basic-simulation.html">the standalone §1 example</a> for
-        a live demo of that pattern. It's useful as an explicit zoom-to-fit (initial framing,
-        a "Reset view" button after a big data change), but not as the steady-state setup —
-        positions aren't in canvas coordinates any more, and the transform fights any user
-        zoom you might add later.</p>
+    <p><code>boundaryForce</code> hard-clips: nodes that would have drifted past the edge
+        end up squashed against it, which biases the layout near the boundary. The smoother
+        alternative is a pair of gentle attractive forces toward the centre —
+        <code>forceX(cx).strength(0.1)</code> and <code>forceY(cy).strength(0.1)</code> —
+        applied in §2 below.</p>
+    <p>A different alternative is <strong>fit-to-canvas</strong>: let the simulation run
+        free and rescale the wrapping <code>&lt;g&gt;</code> <em>after</em> it cools, so
+        the natural bounding box fills the canvas
+        (<a href="examples/11b/01-basic-simulation.html">live demo</a>). Useful as an
+        explicit zoom-to-fit, but node positions are no longer in canvas coordinates so
+        the transform fights any user zoom added later.</p>
 
     <h2>2. The four standard forces</h2>
     <p>In practice you almost always parameterize four forces:</p>
@@ -146,6 +135,7 @@ function ticked() {
 }</code></pre>
     <p>Drag any of the six sliders below; the simulation reheats and re-converges:</p>
     <div class="container" id="demo-tuned"></div>
+    <p class="example-link"><a href="examples/11b/02-tuned-forces.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <h2>4. Alpha — how the simulation cools down</h2>
     <p>A force simulation has an internal <strong>alpha</strong> in [0, 1] — the temperature. Each tick
@@ -174,6 +164,7 @@ pinned.fy = innerH / 2;</code></pre>
         toggle off and the rest of the network re-equilibrates around the freed nodes:</p>
     <p><button id="toggle-pins">Toggle pins on / off</button></p>
     <div class="container" id="demo-pinned"></div>
+    <p class="example-link"><a href="examples/11b/03-pinned-nodes.html" target="_blank" rel="noopener">↗ example</a></p>
 
     <div class="note"><strong>Takeaway.</strong> The simulation is the loop, the join is the rendering,
         the <code>tick</code> handler is the hinge between them. Tune the four standard forces, add a
@@ -226,11 +217,6 @@ pinned.fy = innerH / 2;</code></pre>
                     .attr("stroke", "white").attr("stroke-width", 1)
                     .attr("vector-effect", "non-scaling-stroke");
                 if (basicSim) basicSim.stop();
-                // The one place in L11 where boundaryForce is wired into a simulation.
-                // It's a 5-line custom force (see prose above) that clamps every node's
-                // (x, y) to the inner-canvas rectangle on every tick. Easy to write, but
-                // it hard-clips nodes against the edges — every later L11 demo uses a
-                // gentler forceX + forceY pair at strength 0.04 to centre the layout.
                 basicSim = d3.forceSimulation(nodes)
                     .force("link", d3.forceLink(links).id(d => d.id))
                     .force("charge", d3.forceManyBody())
