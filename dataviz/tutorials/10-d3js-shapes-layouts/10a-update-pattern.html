@@ -18,8 +18,8 @@
         chart into a living one is making it <em>respond when the data updates</em> — the user
         sorts, filters, scrubs a slider, switches a year. In 09b you used <code>.join("circle")</code>
         to draw a chart once; now we call the same code again with a <em>different</em> data array
-        and let D3 figure out the diff. Two new ideas make that work: <strong>key functions</strong>
-        (so D3 tracks each datum across calls) and <strong>custom enter / update / exit
+        and let D3.js figure out the diff. Two new ideas make that work: <strong>key functions</strong>
+        (so D3.js tracks each datum across calls) and <strong>custom enter / update / exit
         callbacks</strong> (so you can style each sub-selection differently). This is the
         foundation for every dynamic chart in the rest of L10.</p>
 
@@ -39,7 +39,7 @@
     </ol>
 
     <h2>1. The older explicit pattern</h2>
-    <p>Before <code>selection.join</code> was added (D3 v5.8, early 2019), every update wrote the
+    <p>Before <code>selection.join</code> was added (D3.js v5.8, early 2019), every update wrote the
         three sub-selections by hand. You will still see this form in older examples:</p>
     <pre><code>// older pattern — three sub-selections, .merge() to combine enter+update
 const sel = svg.selectAll("circle").data(data, d =&gt; d.id);
@@ -60,7 +60,7 @@ sel.enter()                                   // 2. create new
         re-bind it with a different array. Modern code rarely calls the explicit form above:</p>
     <pre><code>function render(data) {
     svg.selectAll("circle")
-        .data(data, d =&gt; d.id)             // re-bind — D3 diffs against the existing DOM
+        .data(data, d =&gt; d.id)             // re-bind — D3.js diffs against the existing DOM
         .join("circle")                     // creates / keeps / removes to match
             .attr("cx", d =&gt; x(d.value))
             .attr("cy", d =&gt; y(d.group))
@@ -76,8 +76,8 @@ render(sortedData);                         // again — every call diffs from t
     <h2>3. Keys preserve object identity</h2>
     <p>The second argument to <code>.data()</code> is the <strong>key function</strong>:</p>
     <pre><code>.data(data, d =&gt; d.id)</code></pre>
-    <p>Without a key, D3 matches data to elements <strong>by index</strong>. That is fine for a one-shot
-        chart, but breaks the moment the data is sorted, filtered, or shuffled — D3 thinks the first row
+    <p>Without a key, D3.js matches data to elements <strong>by index</strong>. That is fine for a one-shot
+        chart, but breaks the moment the data is sorted, filtered, or shuffled — D3.js thinks the first row
         always corresponds to the first DOM element, even after a sort.</p>
     <p>Two charts of the same five items, one shuffle button. The <strong>only difference</strong>
         between them is the second argument to <code>.data()</code>: the left chart uses an
@@ -125,7 +125,7 @@ render(sortedData);                         // again — every call diffs from t
             .call(ex =&gt; ex.transition().duration(300)
                 .attr("r", 0).remove())                            // shrink and go
     );</code></pre>
-    <p>Each callback returns a selection. D3 merges <code>enter</code>'s return value with the update
+    <p>Each callback returns a selection. D3.js merges <code>enter</code>'s return value with the update
         selection automatically, so subsequent <code>.attr</code> calls on the result of <code>.join(...)</code>
         run on both new and kept elements.</p>
     <p>The demo below uses this exact form — entering circles fade in green, updating circles stay blue,
@@ -203,7 +203,7 @@ render(sortedData);                         // again — every call diffs from t
         across the sort with the eye is hard. The missing ingredient is animation — and that is the
         whole subject of <code>10b</code>.</p>
 
-    <div class="note"><strong>Takeaway.</strong> Every D3 chart that responds to change runs the
+    <div class="note"><strong>Takeaway.</strong> Every D3.js chart that responds to change runs the
         same three steps: bind the new data with a <em>key function</em>, call <code>.join</code>,
         and let it create / keep / remove elements. For differentiated entry/exit, pass three
         callbacks. <code>10b</code> picks up where Step 2 leaves off and adds

@@ -109,7 +109,7 @@
                 <code>zoom.transform(svg, d3.zoomIdentity)</code> inside a transition.
                 <code>d3.zoomIdentity</code> is the constant transform with
                 <code>k=1, x=0, y=0</code> — i.e. "no zoom". Routing the reset through the zoom
-                behaviour (instead of mutating attributes directly) keeps D3's internal state in
+                behaviour (instead of mutating attributes directly) keeps D3.js's internal state in
                 sync, so the next wheel-scroll continues from the reset position rather than
                 jumping back to wherever the user was.</li>
         </ul>

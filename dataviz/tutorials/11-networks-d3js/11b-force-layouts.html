@@ -59,7 +59,7 @@ function ticked() {
     return force;
 }</code></pre>
     <p>Any function with an <code>initialize(nodes)</code> method and a callable signature qualifies as a
-        D3 force — that's the full extension API. Here it just clips coordinates; you could equally
+        D3.js force — that's the full extension API. Here it just clips coordinates; you could equally
         implement gravity, an obstacle field, or a custom potential.</p>
     <p>While the simulation warms up the canvas is dimmed by an overlay; once <code>alpha</code> falls
         below <code>alphaMin</code> the simulation emits an <code>"end"</code> event and the overlay
@@ -73,7 +73,7 @@ function ticked() {
         clamps each node's (x, y) into the inner-canvas rectangle. The point of including it
         once is twofold — it shows the
         <a href="#sec-2">custom-force extension API</a> (any function with
-        <code>initialize(nodes)</code> qualifies as a D3 force), and it's the most intuitive
+        <code>initialize(nodes)</code> qualifies as a D3.js force), and it's the most intuitive
         "keep the graph in view" mechanism to read.</p>
     <p><strong>Why every later L11 demo uses a different recipe.</strong>
         <code>boundaryForce</code> hard-clips: nodes that would have drifted past the edge end
@@ -190,7 +190,7 @@ pinned.fy = innerH / 2;</code></pre>
             — disjoint force-directed graph</a> (covers networks with multiple components).</li>
     </ul>
 
-    <p class="tutorial-nav"><a href="11a-networkx-to-d3.html">← 11a — From NetworkX to D3</a> ·
+    <p class="tutorial-nav"><a href="11a-networkx-to-d3.html">← 11a — From NetworkX to D3.js</a> ·
         <a href="index.html">L11 index</a> ·
         <a href="11c-interactivity.html">11c — Interactivity →</a></p>
 

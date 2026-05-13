@@ -16,7 +16,7 @@
     <h1>10d — Layouts: bar, stacked bar, streamgraph</h1>
     <p class="lead">10a, 10b, and 10c built the three L10 mechanisms — <strong>update pattern</strong>,
         <strong>transitions</strong>, and <strong>events</strong>. This tutorial spends them on real
-        chart types from the <a href="https://observablehq.com/@d3/gallery" target="_blank">D3
+        chart types from the <a href="https://observablehq.com/@d3/gallery" target="_blank">D3.js
         Observable gallery</a>: a <strong>bar chart</strong> (the simplest layout-driven chart), a
         <strong>stacked bar chart</strong> (introducing the <code>d3.stack</code> layout — a function
         that turns a flat row-oriented array into per-segment <code>[y0, y1]</code> intervals), and a
@@ -40,7 +40,7 @@
             shape) and a smoothing <em>curve</em>. Three steps from flat baseline → centred →
             canonical wiggle, plus an interactive playground.</li>
         <li><strong>Choosing a layout</strong> (§9-§10). One short paragraph on what makes
-            <code>d3.stack</code> a "layout" in the D3 sense, then a decision table covering every
+            <code>d3.stack</code> a "layout" in the D3.js sense, then a decision table covering every
             layout you will meet in L11 / L12.</li>
     </ol>
 
@@ -54,7 +54,7 @@
     </ul>
     <p>Because SVG <code>y</code> grows downward, the <em>top</em> of a bar has the <em>smaller</em>
         <code>y</code>. The <code>height</code> is then computed as the distance from the top down to the
-        baseline. Most bar-chart bugs in D3 trace back to this single fact.
+        baseline. Most bar-chart bugs in D3.js trace back to this single fact.
     </p>
 
     <h2>2. Bar chart construction, step by step</h2>
@@ -179,7 +179,7 @@ plot.selectAll("text.value").data(barData).join("text")
     </ul>
     <p>The lower and upper edges are <em>running totals</em> — the cherries layer's lower edge is
         apples + bananas, its upper edge is apples + bananas + cherries. Computing them by hand
-        every render would be tedious and error-prone, so D3 ships a helper that does the
+        every render would be tedious and error-prone, so D3.js ships a helper that does the
         arithmetic and packages the result in a join-friendly shape:
         <code>d3.stack()</code>.</p>
 
@@ -341,7 +341,7 @@ const area = d3.area()
     <div class="container" id="demo-stream-step3"></div>
 
     <h2>8. Streamgraph — interactive playground</h2>
-    <p>D3 ships a small zoo of stack offsets and orders. The interactive version below lets you mix and
+    <p>D3.js ships a small zoo of stack offsets and orders. The interactive version below lets you mix and
         match — same data, same layout, very different pictures (the Observable gallery's
         <a href="https://observablehq.com/@d3/streamgraph" target="_blank"><em>Streamgraph</em></a>
         notebook does the same).</p>
@@ -370,10 +370,10 @@ const area = d3.area()
     <div class="legend" id="legend-stream"></div>
     <div class="container" id="demo-stream"></div>
 
-    <h2>9. <code>d3.stack</code> is one example of a D3 layout</h2>
+    <h2>9. <code>d3.stack</code> is one example of a D3.js layout</h2>
     <p>Step back for a second. <code>d3.stack()</code> is a function that took flat input rows and
         produced drawable geometry — per-segment <code>[y0, y1]</code> intervals. That contract —
-        <em>data goes in, drawable geometry comes out</em> — is what D3 means by a
+        <em>data goes in, drawable geometry comes out</em> — is what D3.js means by a
         <strong>layout</strong>. There is a small family of them, and their API shapes are all
         recognisably similar:</p>
     <ul>
@@ -452,7 +452,7 @@ const area = d3.area()
             </tr>
         </tbody>
     </table>
-    <p>The mechanical pattern is identical across every D3 layout: <em>data goes in, drawable geometry
+    <p>The mechanical pattern is identical across every D3.js layout: <em>data goes in, drawable geometry
         comes out</em>. The skill is matching the geometry to the question.</p>
 
     <div class="note"><strong>Takeaway.</strong> 10d shows the three L10 mechanisms (update / transition /

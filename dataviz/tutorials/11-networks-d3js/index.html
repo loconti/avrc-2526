@@ -21,7 +21,7 @@
     <h2>Tutorials</h2>
     <p>Run them in order — each one builds on the previous.</p>
     <ol>
-        <li><a href="11a-networkx-to-d3.html"><strong>11a — From NetworkX to D3</strong></a><br>
+        <li><a href="11a-networkx-to-d3.html"><strong>11a — From NetworkX to D3.js</strong></a><br>
             The node-link JSON format produced by <code>nx.node_link_data</code>; the GoT co-occurrence
             dataset; drawing nodes as <code>&lt;circle&gt;</code> and links as <code>&lt;line&gt;</code> at
             fixed positions; why a layout algorithm is needed once positions aren't given.
@@ -71,7 +71,7 @@
     <pre><code>cd 11-networks-d3js
 python -m http.server 8000
 # open http://localhost:8000/</code></pre>
-    <p>D3 is loaded from the CDN (<code>https://d3js.org/d3.v7.min.js</code>); no installation required.</p>
+    <p>D3.js is loaded from the CDN (<code>https://d3js.org/d3.v7.min.js</code>); no installation required.</p>
 
     <p><strong>Navigating each demo.</strong> Every L11 demo has pan and zoom on the SVG
         stage by default: <em>drag the empty background</em> to move the view (handy for
@@ -115,7 +115,7 @@ python -m http.server 8000
         <thead><tr><th>Tutorial</th><th>Examples</th></tr></thead>
         <tbody>
             <tr>
-                <td><a href="11a-networkx-to-d3.html">11a — From NetworkX to D3</a></td>
+                <td><a href="11a-networkx-to-d3.html">11a — From NetworkX to D3.js</a></td>
                 <td>
                     <a href="examples/11a/01-json-summary.html">JSON summary</a> ·
                     <a href="examples/11a/02-fixed-circle.html">fixed circular layout</a> ·
@@ -177,11 +177,11 @@ python -m http.server 8000
     <ul>
         <li><a href="https://github.com/d3/d3-force" target="_blank">d3-force</a> — every force in
             <code>d3.forceSimulation</code></li>
-        <li><a href="https://observablehq.com/@d3/force-directed-graph" target="_blank">D3 force-directed
+        <li><a href="https://observablehq.com/@d3/force-directed-graph" target="_blank">D3.js force-directed
             graph (Observable)</a></li>
         <li><a href="https://github.com/d3/d3-zoom" target="_blank">d3-zoom</a> — the zoom behaviour</li>
         <li><a href="https://networkx.org/documentation/stable/reference/readwrite/json_graph.html"
-                target="_blank">NetworkX <code>json_graph</code></a> — produces the JSON D3 expects</li>
+                target="_blank">NetworkX <code>json_graph</code></a> — produces the JSON D3.js expects</li>
     </ul>
 </body>
 

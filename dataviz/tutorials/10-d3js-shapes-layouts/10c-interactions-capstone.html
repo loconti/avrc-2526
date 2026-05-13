@@ -41,20 +41,20 @@
     <h2>How this tutorial is organised</h2>
     <p>Three blocks, in order:</p>
     <ol>
-        <li><strong>The pattern</strong> (§1-§2). How D3 forwards DOM events to your callbacks,
-            and the three-step <em>event → state → render</em> loop that every interactive D3
+        <li><strong>The pattern</strong> (§1-§2). How D3.js forwards DOM events to your callbacks,
+            and the three-step <em>event → state → render</em> loop that every interactive D3.js
             chart follows.</li>
         <li><strong>Three interactions, one chart at a time</strong> (§3-§5). Hover (§3), click
             to toggle a selection (§4), and a year slider (§5) — each is built up step by step
             in isolation so you can read the diff between "static" and "interactive" cleanly.</li>
         <li><strong>Capstone and helpers</strong> (§6-§8). One chart that combines hover + click
-            + legend filter + slider; then a brief tour of D3's dedicated event helpers
+            + legend filter + slider; then a brief tour of D3.js's dedicated event helpers
             (<code>d3.brush</code>, <code>d3.drag</code>, <code>d3.zoom</code>); then a four-step
             walkthrough of <code>d3.brush</code> in detail.</li>
     </ol>
 
     <h2>1. Listening for user actions</h2>
-    <p>D3 selections forward DOM events through <code>selection.on</code>:</p>
+    <p>D3.js selections forward DOM events through <code>selection.on</code>:</p>
     <pre><code>svg.selectAll("circle")
     .on("mouseover", (event, d) =&gt; {
         console.log("hover on", d.country);
@@ -74,7 +74,7 @@
     </ul>
 
     <h2>2. The event → state → render loop</h2>
-    <p>Most interactive D3 charts follow the same three-step loop:</p>
+    <p>Most interactive D3.js charts follow the same three-step loop:</p>
     <ol>
         <li><strong>Event</strong> — a user action fires (a hover, a click, a slider drag).</li>
         <li><strong>State</strong> — the callback updates a small piece of state (a selected continent, a
@@ -294,7 +294,7 @@ svg.selectAll("circle")
         <li><strong>Enter sets attributes instantly, then the merged selection transitions.</strong>
             New circles appear in the right place on year 1; from then on they slide.</li>
         <li><strong>Drag fast and the transitions interrupt cleanly.</strong> If a new
-            <code>input</code> event arrives mid-flight, D3 cancels the in-flight transition and
+            <code>input</code> event arrives mid-flight, D3.js cancels the in-flight transition and
             starts a new one from the circle's current position — no jitter, no jumps.</li>
     </ul>
     <p>Drag the slider to watch the world develop from 1952 onward:</p>
@@ -321,7 +321,7 @@ svg.selectAll("circle")
     <div id="tooltip"></div>
 
     <h2>7. Built-in interaction helpers</h2>
-    <p>For richer behaviours D3 ships dedicated helpers that handle the messy event details so your
+    <p>For richer behaviours D3.js ships dedicated helpers that handle the messy event details so your
         callback stays declarative:</p>
     <ul>
         <li><code>d3.brush</code> — drag a rectangular selection over the chart (filtering, range
@@ -337,11 +337,11 @@ svg.selectAll("circle")
     <p>A <em>brush</em> is a draggable rectangular selection that the user paints onto the chart.
         Inside the rectangle: the data points the reader cares about. Outside: everything else,
         which we usually fade. The reader can resize the brush from its handles, drag it
-        wholesale to translate it, and click the empty area to clear it. D3 ships three
+        wholesale to translate it, and click the empty area to clear it. D3.js ships three
         brush helpers — <code>d3.brushX</code> (selection along x only), <code>d3.brushY</code>
         (along y only), and <code>d3.brush</code> (both axes). They follow the same
         event → state → render loop you have used in §4-§5; the only new ingredient is that
-        the event source is now a D3 helper instead of a single DOM listener.</p>
+        the event source is now a D3.js helper instead of a single DOM listener.</p>
 
     <h3>Step 1 — create a brush behaviour</h3>
     <p>A brush is a <em>behaviour object</em>: you configure it, then apply it to an SVG group.
@@ -382,7 +382,7 @@ svg.selectAll("circle")
             it, the next line would crash because <code>null.map(...)</code> is an error.</li>
         <li><strong><code>selection.map(x.invert)</code></strong> uses the scale's inverse function
             to translate pixel positions back into data values. This is why scales matter so much
-            in D3 — they are bidirectional.</li>
+            in D3.js — they are bidirectional.</li>
         <li><strong>The opacity ternary</strong> is a tiny render: each circle's opacity is a
             function of one piece of state (the inverted band <code>[x0, x1]</code>). Same shape as
             §4's <code>selected</code> ternary.</li>
@@ -395,7 +395,7 @@ svg.selectAll("circle")
     <pre><code>svg.append("g")
     .attr("class", "brush")
     .call(brush);              // applies the configured behaviour to the group</code></pre>
-    <p><code>selection.call(brush)</code> is the standard D3 idiom for invoking a behaviour on a
+    <p><code>selection.call(brush)</code> is the standard D3.js idiom for invoking a behaviour on a
         selection — the same pattern <code>d3.zoom</code> and <code>d3.drag</code> use in
         <code>10e</code> and <code>11c</code>. Once you have called it, the user can paint
         rectangles by clicking-and-dragging.</p>
@@ -412,7 +412,7 @@ svg.selectAll("circle")
 
     <p>Same shape as the click / slider handlers in §4-§5: an event fires, a piece of state (here
         the inverted GDP range <code>[x0, x1]</code>) is updated, marks are re-attributed.
-        <strong>Linked views</strong> — the canonical D3 dashboard pattern, where painting on one
+        <strong>Linked views</strong> — the canonical D3.js dashboard pattern, where painting on one
         chart highlights related rows in others — are nothing more than this same handler updating
         a piece of state shared across several charts. Each chart has its own
         <code>render</code>; all of them read the same selection.</p>
@@ -436,7 +436,7 @@ svg.selectAll("circle")
             target="_blank">Brushable scatterplot</a> — Mike Bostock's canonical interactive
             scatterplots.</li>
         <li><a href="https://github.com/d3/d3-selection/blob/main/README.md#handling-events"
-            target="_blank">D3 docs — handling events</a> (event object, <code>currentTarget</code>,
+            target="_blank">D3.js docs — handling events</a> (event object, <code>currentTarget</code>,
             propagation).</li>
     </ul>
 

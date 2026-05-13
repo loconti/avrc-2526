@@ -262,7 +262,7 @@ const dotsG = plot.append("g").attr("clip-path", "url(#clip)");
             expects an immediate response (a brush, a zoom). Use a short transition (300-500 ms)
             for low-frequency state changes where the eye benefits from following motion: a click
             that swaps a dataset, a slider that <em>scrubs</em> across discrete years (as in
-            <code>10c §5</code> — D3 interrupts in-flight transitions cleanly when the user keeps
+            <code>10c §5</code> — D3.js interrupts in-flight transitions cleanly when the user keeps
             dragging). The wrong default is animating <em>every</em> change at 700 ms; that turns
             an interactive chart into a slideshow.</li>
     </ul>
@@ -270,7 +270,7 @@ const dotsG = plot.append("g").attr("clip-path", "url(#clip)");
     <div class="note"><strong>Takeaway.</strong> Navigation is the fifth and final L10 move:
         <em>change → time → input → composition → navigation</em>. With <code>d3.zoom</code> and the
         rescale-scales pattern, any chart with axes accommodates more data than fits on one screen.
-        Combined with the four mechanisms from 10a–10d, you have the full advanced D3 vocabulary. The
+        Combined with the four mechanisms from 10a–10d, you have the full advanced D3.js vocabulary. The
         next two lectures (L11 networks, L12 chord/sankey/bundling) reuse every one of these patterns
         on richer chart types.</div>
 
@@ -288,7 +288,7 @@ const dotsG = plot.append("g").attr("clip-path", "url(#clip)");
 
     <p class="tutorial-nav"><a href="10d-examples-gallery.html">← 10d — Layouts</a> ·
         <a href="index.html">L10 index</a> ·
-        <a href="../11-networks-d3js/index.html">L11 — Networks in D3 →</a></p>
+        <a href="../11-networks-d3js/index.html">L11 — Networks in D3.js →</a></p>
 
     <script>
         // ---------- §10e. zoom — built up step by step ----------

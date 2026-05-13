@@ -42,7 +42,7 @@
     .transition()
         .duration(750)
         .attr("cx", 300);</code></pre>
-    <p>The selection's current state is read at the start; the target value is read from the call. D3
+    <p>The selection's current state is read at the start; the target value is read from the call. D3.js
         produces ~60 intermediate frames per second, interpolating <code>cx</code> from its current value
         to <code>300</code> over 750 ms.</p>
     <p>Click the button — the dot moves from left to right, then back on the next click:</p>
@@ -63,7 +63,7 @@ svg.selectAll("circle")
         .attr("cx", d =&gt; x(d.value))     // numeric → x position
         .attr("cy", d =&gt; y(d.group));    // categorical → y row</code></pre>
     <p>Read it as: <em>bind the data, create or keep marks, then animate marks to their new attributes</em>.
-        Every D3 chart that responds to change uses some variant of this pattern.</p>
+        Every D3.js chart that responds to change uses some variant of this pattern.</p>
 
     <h2>3. Chaining transitions</h2>
     <p>A transition can be followed by another transition. The second one starts when the first finishes:</p>
@@ -89,7 +89,7 @@ svg.selectAll("circle")
         .delay(100)                  // ms before the transition starts
         .ease(d3.easeCubicInOut)     // shape of the time → progress curve
         .attr("cx", d =&gt; x(d.value));</code></pre>
-    <p>D3 ships about thirty easing functions. The five you'll reach for most often:</p>
+    <p>D3.js ships about thirty easing functions. The five you'll reach for most often:</p>
     <ul>
         <li><code>easeLinear</code> — constant speed; mechanical feel</li>
         <li><code>easeCubicInOut</code> — accelerates and decelerates; the everyday default</li>
@@ -130,7 +130,7 @@ svg.selectAll("circle")
     );</code></pre>
     <p>You already saw this idea in <code>10a §3</code> (the keys-vs-index demo, where shuffling
         the array reshuffled the marks). The composition is: <strong>data join → transition</strong>.
-        That two-step phrase covers almost every animated chart in D3.</p>
+        That two-step phrase covers almost every animated chart in D3.js.</p>
 
     <h2>7. Bar race — transitions on a real chart</h2>
     <p>The Observable gallery's

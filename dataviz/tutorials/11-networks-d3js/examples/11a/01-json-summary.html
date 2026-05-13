@@ -16,9 +16,9 @@
 
     <div class="note">
         <h3>What this example shows</h3>
-        <p>The interchange between NetworkX and D3 is a single JSON document with two arrays:
+        <p>The interchange between NetworkX and D3.js is a single JSON document with two arrays:
             <code>nodes</code> and <code>links</code>. NetworkX writes it via
-            <code>nx.node_link_data(G)</code>, D3 reads it via <code>d3.json(url)</code>.
+            <code>nx.node_link_data(G)</code>, D3.js reads it via <code>d3.json(url)</code>.
             Every other example in L11 starts from this same file — <code>datasets/got.json</code>.</p>
         <ul>
             <li><strong>Each node</strong> has an <code>id</code> (any string), plus any number of
@@ -31,7 +31,7 @@
                 inside <code>.then(graph =&gt; …)</code>. No special parser, no schema validation —
                 whatever NetworkX wrote becomes a plain JS object.</li>
             <li><strong>Note: <code>source</code> / <code>target</code> are strings <em>now</em></strong>.
-                Once you pass the links to <code>d3.forceLink</code> (11b), D3 rewrites each one in
+                Once you pass the links to <code>d3.forceLink</code> (11b), D3.js rewrites each one in
                 place with the actual node object. The <code>l.source.id ?? l.source</code> idiom
                 handles both states.</li>
         </ul>

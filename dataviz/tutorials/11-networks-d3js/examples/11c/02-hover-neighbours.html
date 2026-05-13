@@ -27,7 +27,7 @@
                 to the other's set. Each entry includes the node itself so the focal node is
                 just another member of the focus set during hover.</li>
             <li><strong>The <code>l.source.id ?? l.source</code> idiom</strong>: before
-                <code>forceLink</code> initialises, links carry raw string ids; after, D3 has
+                <code>forceLink</code> initialises, links carry raw string ids; after, D3.js has
                 rewritten them with the actual node object. Reading <code>.id</code> with a
                 fallback to the raw string works in both states.</li>
             <li><strong>Tick handler namespacing</strong>:

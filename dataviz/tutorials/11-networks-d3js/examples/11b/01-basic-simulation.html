@@ -48,7 +48,7 @@
             positions and applies a single transform to the wrapping <code>&lt;g&gt;</code> so
             the graph snaps into view. A useful one-off <em>zoom-to-fit</em>, but not the
             default for L11 — see the tutorial's §1 for the alternative pattern
-            (<code>boundaryForce</code>, a custom D3 force that clamps positions tick-by-tick).
+            (<code>boundaryForce</code>, a custom D3.js force that clamps positions tick-by-tick).
             Every other L11 demo uses neither: just a gentle
             <code>forceX(cx).strength(0.1)</code> + <code>forceY(cy).strength(0.1)</code> pair,
             the modern default, which keeps the layout on canvas without either an after-the-fact

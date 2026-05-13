@@ -21,7 +21,7 @@
 
     <h2>1. Drag with <code>d3.drag</code></h2>
     <p>Dragging a node is "pin while the pointer is down": set <code>fx</code>/<code>fy</code> on the dragged
-        datum, follow the pointer, then release. D3 ships a behaviour for the pointer plumbing:</p>
+        datum, follow the pointer, then release. D3.js ships a behaviour for the pointer plumbing:</p>
     <pre><code>function drag(sim) {
     function started(event, d) {
         if (!event.active) sim.alphaTarget(0.3).restart();
@@ -126,7 +126,7 @@ node.on("mouseleave", () =&gt; {
     }
 });</code></pre>
     <p>Combined with drag and hover, this is the full interaction vocabulary you'll see in nearly every
-        D3 network demo. The capstone in <code>11e</code> uses all three:</p>
+        D3.js network demo. The capstone in <code>11e</code> uses all three:</p>
     <div class="container" id="demo-click"></div>
 
     <h2>4. Click-to-isolate with an animated transition</h2>

@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>11a — From NetworkX to D3</title>
+    <title>11a — From NetworkX to D3.js</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="./_shared/chart.js?v=3"></script>
     <link rel="stylesheet" href="./_shared/chart.css">
@@ -13,10 +13,10 @@
 </head>
 
 <body>
-    <h1>11a — From NetworkX to D3</h1>
+    <h1>11a — From NetworkX to D3.js</h1>
     <p class="lead">In the L7 tutorials we built and analysed networks with NetworkX. The visualizations were
         produced by <code>matplotlib</code> — static, server-side, one PNG per call. This lecture moves the
-        same network into the browser. The bridge is a JSON file: NetworkX writes it, D3 reads it,
+        same network into the browser. The bridge is a JSON file: NetworkX writes it, D3.js reads it,
         the rest is the data join you already know.</p>
 
     <h2>1. The node-link JSON format</h2>
@@ -92,7 +92,7 @@ const node = svg.selectAll("circle").data(graph.nodes).join("circle")
     <p>What we want is for nodes that share many edges to land near each other, and unrelated nodes to drift
         apart — automatically, from the structure of the graph itself. That's a <strong>layout</strong>: an
         algorithm that turns a graph into <code>(x, y)</code> per node. The next tutorial introduces the most
-        common one in D3, <code>d3.forceSimulation</code>.</p>
+        common one in D3.js, <code>d3.forceSimulation</code>.</p>
 
     <div class="note"><strong>Takeaway.</strong> A network in the browser is two arrays + two joins:
         <code>links → &lt;line&gt;</code> and <code>nodes → &lt;circle&gt;</code>. Everything we add in
